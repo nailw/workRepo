@@ -226,6 +226,21 @@ if (quantity <= Constant.EPS) {
 }
 ```
 
+### 5.5 C风格for循环
+
+状态：已确认。
+
+DO支持带显式`Int`类型、判断条件和累加表达式的C风格循环：
+
+```java
+var numberList = new List<String>()
+for (Int i = 1; i < 13; i += 1) {
+    numberList.add(i.toString())
+}
+```
+
+当前代码已确认支持`i += 1`。新增循环时仍应保持循环上限清晰，避免在DO方法中产生不可控的大循环。
+
 ## 6. 集合闭包语法
 
 ### 6.1 单参数闭包
@@ -559,6 +574,24 @@ obj.availableReleaseTime = TimeCalc.timePlusDuration(obj.availableTime, detectDu
 obj.availableReleaseDate = obj.availableReleaseTime.toDate()
 ```
 
+现有代码还确认了以下日期方法：
+
+```java
+date.month()
+date.year()
+date.dayOfMonth()
+date.minusMonths(monthCount)
+date.minusDays(dayCount)
+dateTime.toDate()
+```
+
+例如计算交期向前N个月所在月份的第一天：
+
+```java
+var day = workOrder.dueDate.dayOfMonth()
+var firstDay = workOrder.dueDate.minusMonths(monthCount).minusDays(day - 1)
+```
+
 日期和DateTime不能在不了解类型的情况下直接混用。
 
 ## 16. 字符串与转换工具
@@ -684,6 +717,7 @@ var outputSupplies = supplyMap.getOrDefault(materialDemand.materialId, new List<
 | 2026-07-15 | 初始整理 | 根据现有核料代码建立第一版DO语言语法规范 | 全文 |
 | 2026-07-15 | 用户要求 | 代码示例减少不必要换行，保持DO编辑器中易复制 | 18.2 |
 | 2026-07-15 | 用户提供模型字段截图 | 确认MaterialSupply真实字段为`leftQuantityVritual`；历史字段拼写必须按模型原样使用，不能自行纠正为`Virtual` | 12.3 |
+| 2026-07-15 | 用户提供生产月份过滤代码 | 确认DO支持`for(Int i=...;...;i+=1)`循环，以及`month/year/dayOfMonth/minusMonths/minusDays`日期运算 | 5.5、15 |
 
 后续每次发生以下情况时，在本表追加一条记录：
 
