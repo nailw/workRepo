@@ -469,6 +469,14 @@ inventory.sapStockingPointId
 
 不能因为Java通常使用小驼峰，就自行把`NoLocationId`改成`noLocationId`。
 
+字段的历史拼写也必须完全照模型使用，即使英文单词看起来拼写不规范。例如MaterialSupply模型的真实字段为：
+
+```java
+leftQuantityVritual
+```
+
+这里模型使用的是`Vritual`，业务代码必须同样写`leftQuantityVritual`，不能根据英文习惯自行改成`leftQuantityVirtual`。界面表头、截图显示或人的口头描述不能替代模型属性面板中的真实字段名。
+
 ## 13. 数据库访问
 
 ### 13.1 DbHelper
@@ -675,6 +683,7 @@ var outputSupplies = supplyMap.getOrDefault(materialDemand.materialId, new List<
 |---|---|---|---|
 | 2026-07-15 | 初始整理 | 根据现有核料代码建立第一版DO语言语法规范 | 全文 |
 | 2026-07-15 | 用户要求 | 代码示例减少不必要换行，保持DO编辑器中易复制 | 18.2 |
+| 2026-07-15 | 用户提供模型字段截图 | 确认MaterialSupply真实字段为`leftQuantityVritual`；历史字段拼写必须按模型原样使用，不能自行纠正为`Virtual` | 12.3 |
 
 后续每次发生以下情况时，在本表追加一条记录：
 
