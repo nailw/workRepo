@@ -671,13 +671,21 @@ var outputSupplies = supplyMap.getOrDefault(materialDemand.materialId, new List<
 
 状态：用户明确确认。
 
-DO业务方法支持直接使用`log.info()`打印运行日志。排查集合过滤、分支判断和数量变化时，应优先一次性打印关键链路，减少逐点断点调试：
+DO平台存在日志调用的作用域差异，不能假设所有方法都统一使用`log.info(String)`：
+
+- 在`Utils`等部分方法中，现有代码确认可使用`log.info("...")`；
+- 在`MaterialSupply`静态模型方法中，平台编译器提示`Cannot find name 'info'`和`Unexpected Argument: String`，此处应使用平台提供的`log("...")`；
+- 编写日志时先参考当前所属类的已有成功代码，不能只参考其他类的日志写法。
 
 ```java
-log.info("核料供应过滤：productId="+materialDemand.productId+",materialId="+materialDemand.materialId+",before="+beforeSize.toString()+",after="+afterSize.toString())
+// MaterialSupply静态模型方法中的已确认写法
+log("核料供应过滤：productId="+materialDemand.productId+",materialId="+materialDemand.materialId)
+
+// Utils等已存在日志对象的上下文
+log.info("运行结果："+result.toString())
 ```
 
-日志内容应带产品、物料、需求或批次标识，避免大场景中无法区分记录。高频循环中只对目标数据打印，问题确认后删除或降低临时日志，避免产生大量日志和影响性能。
+排查集合过滤、分支判断和数量变化时，应优先一次性打印关键链路，减少逐点断点调试。日志内容应带产品、物料、需求或批次标识；高频循环中只对目标数据打印，问题确认后删除临时日志，避免产生大量日志和影响性能。
 
 ## 19. 与常见语言不同的重点
 
@@ -731,7 +739,8 @@ log.info("核料供应过滤：productId="+materialDemand.productId+",materialId
 | 2026-07-15 | 用户提供模型字段截图 | 确认MaterialSupply真实字段为`leftQuantityVritual`；历史字段拼写必须按模型原样使用，不能自行纠正为`Virtual` | 12.3 |
 | 2026-07-15 | 用户提供生产月份过滤代码 | 确认DO支持`for(Int i=...;...;i+=1)`循环，以及`month/year/dayOfMonth/minusMonths/minusDays`日期运算 | 5.5、15 |
 
-| 2026-07-15 | 用户纠正调试方式 | 确认DO业务方法可直接使用`log.info()`；复杂过滤链应优先一次性打印关键数量和条件，减少逐点断点排查 | 18.4 |
+| 2026-07-15 | 用户纠正调试方式 | 复杂过滤链应优先一次性打印关键数量和条件，减少逐点断点排查 | 18.4 |
+| 2026-07-15 | 平台编译结果纠错 | 日志调用具有作用域差异：`Utils`等上下文可用`log.info(String)`，当前`MaterialSupply`静态模型方法应使用`log(String)`；不能把一种写法推广到所有DO方法 | 18.4 |
 
 后续每次发生以下情况时，在本表追加一条记录：
 
