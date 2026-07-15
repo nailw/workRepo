@@ -1,0 +1,753 @@
+可以开始写代码了。建议先完成“必改部分”，验证新核料能够过滤禁用库位；冻结分配属于第二阶段处理，避免一次改动过大。
+
+# 一、本次需要修改的位置
+
+最小改造一共包含：
+
+| 序号 | 对象                                | 修改内容                    |
+| -: | --------------------------------- | ----------------------- |
+|  1 | `KTProductRouting`                | 新增 `NoLocationId`       |
+|  2 | `MaterialSupply`                  | 新增 `sapStockingPointId` |
+|  3 | 三个库存转换方法                          | 把库存代码复制到供应              |
+|  4 | `MaterialSupply`                  | 新增查询产品禁用库位的方法           |
+|  5 | `queryAvailableFromInputSupplies` | 排除禁用库位库存                |
+|  6 | `reOccupyFrozenMaterialFulfill`   | 可选：处理历史冻结分配             |
+
+---
+
+# 二、增加模型字段
+
+## 1. KTProductRouting
+
+在 `KTProductRouting` 增加：
+
+```text
+字段名：NoLocationId
+类型：String
+描述：禁用库存代码
+默认值：""
+```
+
+字段名建议严格按照禅道任务使用：
+
+```text
+NoLocationId
+```
+
+这个平台字段名区分大小写，所以代码中也必须写：
+
+```java
+routing.NoLocationId
+```
+
+建议支持两种配置：
+
+```text
+3411
+```
+
+或者多个库位：
+
+```text
+3411,3413
+```
+
+维护时先不要输入空格，统一使用英文逗号。
+
+## 2. MaterialSupply
+
+增加：
+
+```text
+字段名：sapStockingPointId
+类型：String
+描述：ERP库存代码
+默认值：""
+```
+
+`InventoryIn` 已经有这个字段，但转换成 `MaterialSupply` 时没有复制，所以当前核料分配阶段不知道库存来自哪个库位。
+
+字段增加后，按平台原有流程执行模型发布或数据库同步。
+
+---
+
+# 三、库存转 MaterialSupply 时复制库位
+
+需要改三个方法。
+
+## 1. updateAttributeByInventoryAvailableNode
+
+找到：
+
+```java
+obj.plantId = inventory.plantId
+obj.productId = inventory.productId
+obj.productName = inventory.productName
+```
+
+改成：
+
+```java
+obj.plantId = inventory.plantId
+obj.sapStockingPointId = inventory.sapStockingPointId
+obj.productId = inventory.productId
+obj.productName = inventory.productName
+```
+
+完整关键部分：
+
+```java
+obj.dataSource = ModelConstants.FromInventoryAvailable
+obj.plantId = inventory.plantId
+obj.sapStockingPointId = inventory.sapStockingPointId
+obj.productId = inventory.productId
+obj.productName = inventory.productName
+```
+
+## 2. updateAttributeByInventoryDetectNode
+
+同样增加：
+
+```java
+obj.dataSource = ModelConstants.FromInventoryDetect
+obj.plantId = inventory.plantId
+obj.sapStockingPointId = inventory.sapStockingPointId
+obj.productId = inventory.productId
+obj.productName = inventory.productName
+```
+
+## 3. updateAttributeBySemiInventoryNode
+
+同样增加：
+
+```java
+obj.dataSource = ModelConstants.FromInventoryAvailable
+obj.plantId = inventory.plantId
+obj.sapStockingPointId = inventory.sapStockingPointId
+obj.productId = inventory.productId
+obj.productName = inventory.productName
+```
+
+这三个方法分别覆盖：
+
+* 普通可用库存；
+* 普通待检库存；
+* 半成品库存。
+
+采购订单、采购计划和生产计划没有具体库存代码，`sapStockingPointId` 保持空字符串即可。
+
+---
+
+# 四、新增查询产品禁用库位的方法
+
+建议在 `MaterialSupply` 类新增静态方法。
+
+方法配置：
+
+```text
+方法名：queryNoLocationIdsByProductId
+所属类：MaterialSupply
+返回值：List<String>
+```
+
+参数：
+
+| 参数名       | 类型      |
+| --------- | ------- |
+| context   | Context |
+| productId | String  |
+
+方法体：
+
+```java
+var result = new List<String>()
+if (productId == "") {
+    return result
+}
+
+context.KT<KTProductRouting>().filter{ it.productId == productId }.forEach{ routing ->
+    var locationIds = Utils.splitStringToStringList(routing.NoLocationId ?? "")
+    locationIds.forEach{ locationId ->
+        if (locationId != "" && !result.contain(locationId)) {
+            result.add(locationId)
+        }
+    }
+}
+
+return result
+```
+
+这个方法实现了：
+
+1. 根据成品代码查找 `KTProductRouting`；
+2. 读取 `NoLocationId`；
+3. 支持多个库位；
+4. 自动去重；
+5. 没有配置时返回空列表；
+6. 同一产品存在多条路径时，暂时合并全部禁用库位。
+
+例如：
+
+```text
+产品12020228
+第一条路径：3411
+第二条路径：3411,3413
+```
+
+最终结果是：
+
+```text
+3411、3413
+```
+
+---
+
+# 五、修改公共供应查询
+
+需要修改：
+
+```text
+MaterialSupply.queryAvailableFromInputSupplies
+```
+
+现有方法开头：
+
+```java
+var supplyMap = inputSupplies.groupBy { it.productId }
+var outputSupplies = supplyMap.getOrDefault(materialDemand.materialId, new List<MaterialSupply>())
+```
+
+在这两行后面立即加入：
+
+```java
+// 根据当前生产的成品代码查询禁用库存代码
+var noLocationIds = MaterialSupply.queryNoLocationIdsByProductId(conetxt, materialDemand.productId)
+
+// 只过滤ERP库存供应，采购和生产计划不受影响
+if (!noLocationIds.isEmpty()) {
+    outputSupplies.removeIf{
+        MaterialSupply.isInventorySupply(it) &&
+        (it.sapStockingPointId ?? "") != "" &&
+        noLocationIds.contain(it.sapStockingPointId)
+    }
+}
+```
+
+修改后的方法开头：
+
+```java
+var supplyMap = inputSupplies.groupBy { it.productId }
+var outputSupplies = supplyMap.getOrDefault(materialDemand.materialId, new List<MaterialSupply>())
+
+// 产品禁用库存代码过滤
+var noLocationIds = MaterialSupply.queryNoLocationIdsByProductId(conetxt, materialDemand.productId)
+if (!noLocationIds.isEmpty()) {
+    outputSupplies.removeIf{
+        MaterialSupply.isInventorySupply(it) &&
+        (it.sapStockingPointId ?? "") != "" &&
+        noLocationIds.contain(it.sapStockingPointId)
+    }
+}
+
+// 原有设备组禁用物料逻辑
+var productDemand = conetxt.KT<KTSingleResourceSpeedExtend>().filter{ it.productId == materialDemand.productId }
+if (!productDemand.isEmpty()) {
+    var scheduledPieceSteps = conetxt.Group<PieceStep>().filter{
+        it.productId == materialDemand.productId &&
+        it.pieceId == materialDemand.pieceId &&
+        it.isScheduled == true
+    }
+
+    if (!scheduledPieceSteps.isEmpty()) {
+        scheduledPieceSteps.forEach{ p ->
+            var usedResourceGroupId = conetxt.Group<Resource>().filter{
+                it.resourceId == p.usedResourceId
+            }.firstOrNull()?.resourceGroupId ?? ""
+
+            if (!usedResourceGroupId.isEmpty()) {
+                var materialsID = productDemand.filter{
+                    it.resourceGroupId == usedResourceGroupId
+                }.firstOrNull()?.NoMaterialsID ?? ""
+
+                if (!materialsID.isEmpty()) {
+                    outputSupplies.removeIf{ it.productId == materialsID }
+                }
+            }
+        }
+    }
+}
+```
+
+这里继续沿用你原方法的参数名：
+
+```java
+conetxt
+```
+
+虽然这个单词拼写应该是 `context`，但当前方法参数如果就叫 `conetxt`，新增代码也必须使用 `conetxt`，否则会找不到变量。
+
+---
+
+# 六、为什么使用 materialDemand.productId
+
+这里必须写：
+
+```java
+materialDemand.productId
+```
+
+不能写：
+
+```java
+materialDemand.materialId
+```
+
+因为：
+
+```text
+materialDemand.productId
+= 当前正在生产的成品代码
+= 12020228
+```
+
+而：
+
+```text
+materialDemand.materialId
+= 当前BOM需要的物料代码
+= RM0001
+```
+
+禅道任务要求的是：
+
+> 根据正在生产的产品代码查询禁用库存代码。
+
+所以正确关系是：
+
+```text
+12020228
+→ 查询KTProductRouting
+→ 得到NoLocationId=3411
+→ 排除sapStockingPointId=3411的库存供应
+```
+
+---
+
+# 七、为什么只过滤库存供应
+
+过滤条件中必须保留：
+
+```java
+MaterialSupply.isInventorySupply(it)
+```
+
+因为 `MaterialSupply` 不只有 ERP 库存，还包括：
+
+* 采购订单；
+* 采购计划；
+* 原料药到货计划；
+* 其他场景生产计划；
+* 本车间步骤产出。
+
+这些供应没有实际库存代码。
+
+正确逻辑：
+
+```text
+ERP库存 + 库位命中禁用列表
+→ 排除
+
+采购/生产计划 + 库位为空
+→ 继续参与核料
+```
+
+---
+
+# 八、修改后的实际执行过程
+
+产品路径配置：
+
+```text
+productId = 12020228
+NoLocationId = 3411
+```
+
+当前需求：
+
+```text
+MaterialDemand.productId = 12020228
+MaterialDemand.materialId = RM0001
+```
+
+当前供应：
+
+| MaterialSupply.productId | sapStockingPointId | leftQuantity |
+| ------------------------ | ------------------ | -----------: |
+| RM0001                   | 3410               |           60 |
+| RM0001                   | 3411               |           50 |
+| RM0001                   | 3412               |           40 |
+
+第一步按需求物料查询：
+
+```java
+supplyMap.getOrDefault(materialDemand.materialId, ...)
+```
+
+得到三条 `RM0001` 供应。
+
+第二步查询产品禁用库位：
+
+```java
+queryNoLocationIdsByProductId(conetxt, "12020228")
+```
+
+得到：
+
+```text
+3411
+```
+
+第三步过滤：
+
+```text
+3410：保留
+3411：删除
+3412：保留
+```
+
+最终用于分配的库存：
+
+```text
+3410的60 + 3412的40 = 100
+```
+
+3411 的 50 不会生成 `MaterialFulfill`。
+
+---
+
+# 九、这次修改会自动覆盖哪些分配
+
+不需要分别修改普通需求、替代料和配套组。
+
+因为它们最终都会调用：
+
+```java
+MaterialSupply.queryAvailableFromInputSupplies(...)
+```
+
+覆盖范围：
+
+```text
+普通第一优先级物料
+替代料第一顺位
+替代料下一顺位
+配套组临时满足率计算
+配套组正式分配
+```
+
+所以公共方法改一次即可。
+
+---
+
+# 十、冻结分配怎么处理
+
+建议先完成前面的必改部分并验证，再处理冻结分配。
+
+原因是冻结分配走：
+
+```java
+reOccupyFrozenMaterialFulfill()
+```
+
+不会调用：
+
+```java
+queryAvailableFromInputSupplies()
+```
+
+因此存在以下场景：
+
+```text
+原来冻结使用3411
+后来给产品配置NoLocationId=3411
+重新核料时仍继续占用3411
+```
+
+如果禅道任务要求“任何情况下都不能使用禁用库位”，冻结逻辑也要改。
+
+## 1. 增加无效冻结列表
+
+在方法开始处增加：
+
+```java
+var invalidFrozenFulfills = new List<MaterialFulfill>()
+```
+
+## 2. 在更新需求前先检查供应
+
+你现在的代码是先执行：
+
+```java
+demand.fulfillQuantity += fulfill.quantity
+```
+
+然后再查询供应。
+
+应该调整为先查供应：
+
+```java
+var noLocationIds = MaterialSupply.queryNoLocationIdsByProductId(context, demand.productId)
+
+fulfills.forEach{ fulfill ->
+    var supply = supplyMap.getOrDefault(fulfill.supplyUniqueId, new List<MaterialSupply>()).firstOrNull()
+
+    if (supply == null) {
+        invalidFrozenFulfills.add(fulfill)
+        return
+    }
+
+    if (
+        MaterialSupply.isInventorySupply(supply) &&
+        noLocationIds.contain(supply.sapStockingPointId ?? "")
+    ) {
+        invalidFrozenFulfills.add(fulfill)
+        return
+    }
+
+    demand.fulfillQuantity += fulfill.quantity
+
+    if (firstPriorityDemand != null) {
+        var demandQty = demand.pieceStepQuantity * demand.inputFactor
+        var ratio = demandQty > 0.0 ? fulfill.quantity / demandQty : 0.0
+        firstPriorityDemand.leftRatio -= ratio
+    }
+
+    supply.leftQuantity -= fulfill.quantity
+    supply.leftQuantity.roundHalfDown(7)
+
+    if (!needUpdateSupplies.contain(supply)) {
+        needUpdateSupplies.add(supply)
+    }
+
+    fulfill.availableDate = supply.availableReleaseDate
+    fulfill.availableTime = supply.availableReleaseTime
+}
+```
+
+## 3. 删除非法冻结分配
+
+循环全部结束后：
+
+```java
+if (!invalidFrozenFulfills.isEmpty()) {
+    frozenFulfills.removeIf{ invalidFrozenFulfills.contain(it) }
+    dh.deleteBatch(invalidFrozenFulfills)
+}
+```
+
+然后再执行原来的更新：
+
+```java
+dh.updateBatch(needUpdateDemands)
+dh.updateBatch(needUpdateSupplies)
+dh.updateBatch(frozenFulfills)
+```
+
+这样被禁用的冻结分配会删除，需求不会增加已满足量，后续普通分配可以重新选择其他库位。
+
+---
+
+# 十一、建议的开发顺序
+
+按照下面顺序操作，比较容易排查问题。
+
+## 第一步：增加字段并发布模型
+
+增加：
+
+```text
+KTProductRouting.NoLocationId
+MaterialSupply.sapStockingPointId
+```
+
+先确保模型发布成功，没有数据库字段或编译错误。
+
+## 第二步：只修改三个库存转换方法
+
+重新核料后检查 `MaterialSupply` 数据：
+
+```text
+sapStockingPointId是否已经出现3410、3411、3412
+```
+
+如果这里还是空，后面的过滤一定不会生效。
+
+## 第三步：增加查询禁用库位方法
+
+用产品 `12020228` 测试：
+
+```java
+MaterialSupply.queryNoLocationIdsByProductId(context, "12020228")
+```
+
+预期：
+
+```text
+3411
+```
+
+测试 `12020071`，预期返回空列表。
+
+## 第四步：修改公共供应过滤
+
+先不要改冻结逻辑，执行一次没有冻结结果的新核料。
+
+检查：
+
+```text
+12020228不能使用3411
+12020071仍然可以使用3411
+```
+
+## 第五步：处理冻结分配
+
+新分配验证正确后，再创建冻结测试数据，验证禁用规则是否能解除非法冻结。
+
+---
+
+# 十二、必须执行的测试
+
+## 测试1：没有配置禁用库位
+
+```text
+productId = 12020071
+NoLocationId = ""
+```
+
+预期：
+
+```text
+3410、3411、3412都可以使用
+```
+
+## 测试2：禁用一个库位
+
+```text
+productId = 12020228
+NoLocationId = "3411"
+```
+
+预期：
+
+```text
+3410、3412可以使用
+3411不能使用
+```
+
+## 测试3：禁用多个库位
+
+```text
+NoLocationId = "3411,3413"
+```
+
+预期：
+
+```text
+3411、3413都被排除
+```
+
+## 测试4：同一库位用于不同产品
+
+```text
+产品A禁用3411
+产品B未禁用3411
+```
+
+预期：
+
+```text
+产品A不能使用3411
+产品B仍然能使用3411
+```
+
+## 测试5：三种库存类型
+
+分别测试：
+
+```text
+可用库存
+待检库存
+半成品库存
+```
+
+三种库存都应执行禁用库位过滤。
+
+## 测试6：非库存供应
+
+测试：
+
+```text
+采购订单
+采购计划
+其他场景生产计划
+本车间生产计划
+```
+
+这些供应不应因为没有 `sapStockingPointId` 被排除。
+
+## 测试7：替代料
+
+主物料不足，替代料在 3411。
+
+预期：
+
+```text
+替代料的3411库存也不能使用
+```
+
+## 测试8：配套组
+
+某个配套组物料只有 3411 有库存。
+
+预期：
+
+```text
+临时满足率计算时就排除3411
+正式分配时也不使用3411
+```
+
+## 测试9：冻结分配
+
+先冻结一条 3411 的分配，再给产品配置禁用 3411。
+
+如果实施冻结改造，预期：
+
+```text
+原冻结分配失效
+系统重新选择其他合法库位
+```
+
+---
+
+# 十三、第一版先不要改的内容
+
+本次暂时不要顺带修改：
+
+* 替代料 `leastQty` 参数；
+* 设备组 `NoMaterialsID` 逻辑；
+* BOM版本查询；
+* 配套组拼接键；
+* `roundHalfDown()` 行为；
+* 其他供应数量过滤。
+
+这些代码虽然存在潜在问题，但不属于禅道任务 24039。一起修改会扩大测试范围，也不容易判断库位过滤是否正确。
+
+最稳妥的第一版就是：
+
+```text
+增加两个字段
+→ 三个库存转换方法复制库位
+→ 增加禁用库位查询方法
+→ 公共供应查询过滤
+→ 验证后再处理冻结分配
+```
