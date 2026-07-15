@@ -667,6 +667,18 @@ var outputSupplies = supplyMap.getOrDefault(materialDemand.materialId, new List<
 
 修改已有方法时，变量名、Context获取方式、闭包格式和集合工具应尽量与相邻代码一致，避免在同一方法混用不同风格。
 
+### 18.4 日志调试
+
+状态：用户明确确认。
+
+DO业务方法支持直接使用`log.info()`打印运行日志。排查集合过滤、分支判断和数量变化时，应优先一次性打印关键链路，减少逐点断点调试：
+
+```java
+log.info("核料供应过滤：productId="+materialDemand.productId+",materialId="+materialDemand.materialId+",before="+beforeSize.toString()+",after="+afterSize.toString())
+```
+
+日志内容应带产品、物料、需求或批次标识，避免大场景中无法区分记录。高频循环中只对目标数据打印，问题确认后删除或降低临时日志，避免产生大量日志和影响性能。
+
 ## 19. 与常见语言不同的重点
 
 | DO写法 | 不应直接套用的其他语言习惯 |
@@ -718,6 +730,8 @@ var outputSupplies = supplyMap.getOrDefault(materialDemand.materialId, new List<
 | 2026-07-15 | 用户要求 | 代码示例减少不必要换行，保持DO编辑器中易复制 | 18.2 |
 | 2026-07-15 | 用户提供模型字段截图 | 确认MaterialSupply真实字段为`leftQuantityVritual`；历史字段拼写必须按模型原样使用，不能自行纠正为`Virtual` | 12.3 |
 | 2026-07-15 | 用户提供生产月份过滤代码 | 确认DO支持`for(Int i=...;...;i+=1)`循环，以及`month/year/dayOfMonth/minusMonths/minusDays`日期运算 | 5.5、15 |
+
+| 2026-07-15 | 用户纠正调试方式 | 确认DO业务方法可直接使用`log.info()`；复杂过滤链应优先一次性打印关键数量和条件，减少逐点断点排查 | 18.4 |
 
 后续每次发生以下情况时，在本表追加一条记录：
 
