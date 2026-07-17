@@ -749,3 +749,142 @@ log.info("运行结果："+result.toString())
 - 新代码显示DO语言存在尚未记录的特殊语法；
 - 原有写法虽然类似Java/Groovy/Kotlin，但DO实际语义不同；
 - 平台升级导致语法或API发生变化。
+
+
+## 23. 24039/24040开发补充规范
+
+本节记录2026-07-17在24039、24040核料规则开发中进一步确认的语法和代码约束。
+
+### 23.1 sortedBy是当前确认的排序方法
+
+状态：已确认。
+
+~~~java
+var result = context.KT<KTProcessingTradeHandBook>().filter{
+    (it.semiFinishedId ?? "") == targetSemiFinishedId &&
+    (it.manualNumber ?? "") != ""
+}.sortedBy{ it.createDate }
+~~~
+
+当前DO代码使用 sortedBy。新增排序代码优先沿用该写法。
+
+### 23.2 普通if允许多个条件
+
+状态：已确认。
+
+普通 if 可以写多个逻辑条件：
+
+~~~java
+if (!hasAvailableSupply &&
+    MaterialSupply.isInventorySupply(supply) &&
+    (supply.productId ?? "") == targetMaterialId &&
+    (supply.sapStockingPointId ?? "") == targetLocationId &&
+    supply.leftQuantity > Constant.EPS) {
+    hasAvailableSupply = true
+}
+~~~
+
+此前把“普通if允许多个条件”和“firstOrNull闭包不适合复杂多步逻辑”混为一谈，现已纠正。
+
+### 23.3 firstOrNull闭包不写多步复杂逻辑
+
+状态：已确认的代码约束。
+
+以下写法不作为24039/24040的实现方式：
+
+~~~java
+var selectedHandBook = handBooks.firstOrNull{ handBook ->
+    var targetMaterialId = handBook.materialId ?? ""
+    var targetLocationId = handBook.warehouseLocation ?? ""
+    ...
+}
+~~~
+
+原因是当前DO编辑器中的 firstOrNull 闭包适合返回简单判断表达式，不适合在闭包内声明多个临时变量、遍历另一个集合并修改状态。
+
+推荐使用：
+
+~~~java
+var hasSelectedHandBook = false
+var selectedMaterialId = ""
+var selectedLocationId = ""
+
+handBooks.forEach{ handBook ->
+    if (!hasSelectedHandBook) {
+        // 计算当前手册是否有可用供应
+        if (hasAvailableSupply) {
+            selectedMaterialId = targetMaterialId
+            selectedLocationId = targetLocationId
+            hasSelectedHandBook = true
+        }
+    }
+}
+~~~
+
+### 23.4 不使用复杂的filter后否定判断
+
+状态：已确认的代码约束。
+
+不使用：
+
+~~~java
+if (!supplies.filter{ ... }.isEmpty()) {
+}
+~~~
+
+改用显式标记变量：
+
+~~~java
+var hasAvailableSupply = false
+
+supplies.forEach{ supply ->
+    if (condition) {
+        hasAvailableSupply = true
+    }
+}
+
+if (hasAvailableSupply) {
+}
+~~~
+
+### 23.5 KT对象不作为空占位对象
+
+状态：已确认的实现约束。
+
+不建议：
+
+~~~java
+var selectedHandBook = new KTProcessingTradeHandBook()
+~~~
+
+这里的 new 表示创建一个空的KT对象，不是查询数据。由于24039/24040只需要保存选中的物料代码和库位，使用字符串和布尔变量更安全：
+
+~~~java
+var hasSelectedHandBook = false
+var selectedMaterialId = ""
+var selectedLocationId = ""
+~~~
+
+### 23.6 if的大括号和代码格式
+
+状态：用户明确要求。
+
+所有 if 都必须有大括号，包括只有一行的条件：
+
+~~~java
+if (handBooks.isEmpty()) {
+    return
+}
+~~~
+
+代码减少无意义换行，但逻辑块保持完整，不使用无大括号单行 if。
+
+### 23.7 本次纠错记录
+
+| 日期 | 纠错内容 | 最终规则 |
+|---|---|---|
+| 2026-07-17 | 将 sortBy 纠正为 sortedBy | 排序使用 sortedBy{} |
+| 2026-07-17 | 将普通 if 多条件误认为不允许 | 普通 if 允许多个 &&、|| 条件 |
+| 2026-07-17 | firstOrNull 中声明变量并执行多步逻辑 | 改用 forEach 和标记变量 |
+| 2026-07-17 | 使用 !filter.isEmpty() 判断集合 | 改用显式遍历和布尔变量 |
+| 2026-07-17 | 使用 new KTProcessingTradeHandBook() 作为占位对象 | 改为保存实际字段和选择状态 |
