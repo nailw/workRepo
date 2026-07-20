@@ -1023,3 +1023,735 @@ def predict(features: CustomerFeatures):
 - 记录本周最常见的 3 个错误及解决方式。
 
 完成第一周后，继续按 24 周路线推进。若每天只有 1 小时，不减少练习内容，而是把“一天”延长为两天；稳定持续比短期堆时长更重要。
+
+## 二十八、模块快速上手详解
+
+下面每个模块都按照“目标 → 学习顺序 → 动手任务 → 最小代码 → 练习 → 过关标准”展开。建议一次只攻克一个模块，完成过关标准后再进入下一个。
+
+### 模块 1：Python 开发环境
+
+#### 目标
+
+能创建独立环境、运行脚本、安装依赖、使用 Git 保存代码，并且知道项目为什么在自己的电脑上能运行、换一台电脑却失败。
+
+#### 学习顺序
+
+1. 安装 Python，并确认 `python --version`。
+2. 创建 `.venv`，激活后安装一个包。
+3. 创建 `src/hello.py`，从终端运行它。
+4. 创建 `requirements.txt` 或 `pyproject.toml`。
+5. 初始化 Git，提交一次可运行版本。
+
+#### 动手任务
+
+```bash
+mkdir ml-start
+cd ml-start
+python -m venv .venv
+
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
+
+# macOS / Linux
+source .venv/bin/activate
+
+python -m pip install --upgrade pip
+python -c "import sys; print(sys.executable)"
+mkdir src data tests
+git init
+```
+
+创建 `src/hello.py`：
+
+```python
+import sys
+
+def main() -> None:
+    print(f"Python: {sys.version.split()[0]}")
+    print("机器学习项目环境已启动")
+
+if __name__ == "__main__":
+    main()
+```
+
+#### 练习
+
+- 把 Python、操作系统、当前工作目录打印出来。
+- 安装 `numpy`，在脚本中打印版本号。
+- 删除并重新创建虚拟环境，确认项目仍能运行。
+
+#### 过关标准
+
+你能从一个空目录创建环境、运行脚本、安装依赖，并说明“系统 Python”和“项目虚拟环境”的区别。不要在未解决环境问题前继续安装复杂框架。
+
+### 模块 2：Python 语法与数据结构
+
+#### 目标
+
+能读懂和编写普通数据处理代码，尤其是列表、字典、循环、函数和异常处理。机器学习库并不能代替这些基础能力。
+
+#### 学习顺序
+
+变量和类型 → 条件与循环 → 列表/字典 → 函数 → 推导式 → 文件 → 异常 → 模块。
+
+#### 最小任务：订单汇总
+
+```python
+orders = [
+    {"customer": "A", "amount": 120.0, "status": "paid"},
+    {"customer": "B", "amount": 80.0, "status": "cancelled"},
+    {"customer": "A", "amount": 50.0, "status": "paid"},
+]
+
+def paid_total(rows: list[dict]) -> dict[str, float]:
+    totals: dict[str, float] = {}
+    for row in rows:
+        if row.get("status") != "paid":
+            continue
+        customer = str(row["customer"])
+        totals[customer] = totals.get(customer, 0.0) + float(row["amount"])
+    return totals
+
+print(paid_total(orders))  # {'A': 170.0}
+```
+
+#### 必须理解
+
+- `list` 有顺序，`dict` 是键值映射，`set` 用于去重。
+- 函数应该接收输入并返回结果，不要把所有逻辑写在全局区域。
+- `row.get("x")` 在键不存在时返回 `None`；`row["x"]` 会直接报错。
+- `for` 循环中的变量作用域、可变对象引用和默认参数容易造成隐蔽问题。
+- 看到异常时先看最后一行错误信息，再回到 traceback 中定位自己的代码行。
+
+#### 练习
+
+1. 统计日志中每种 `level` 的数量。
+2. 找出金额最大的 10 笔订单。
+3. 对缺失金额、负金额和未知状态抛出明确的 `ValueError`。
+4. 把代码拆成 `load`、`validate`、`summarize` 三个函数。
+
+#### 过关标准
+
+不看教程也能写一个“读取 JSON—校验字段—汇总—导出 JSON”的脚本，并且能为异常输入写测试。
+
+### 模块 3：NumPy 与向量化
+
+#### 目标
+
+理解数组的形状和批量计算，为 Pandas、机器学习模型和深度学习张量打基础。
+
+#### 学习顺序
+
+数组创建 → `shape`/`ndim` → 切片和布尔索引 → 广播 → 聚合 → 矩阵乘法 → 随机数。
+
+```python
+import numpy as np
+
+rng = np.random.default_rng(42)
+scores = rng.normal(loc=70, scale=10, size=(100, 3))
+
+print(scores.shape)                 # (100, 3)
+print(scores.mean(axis=0))          # 每个科目的平均分
+passed = scores[(scores >= 60).all(axis=1)]
+normalized = (scores - scores.mean(0)) / scores.std(0)
+
+weights = np.array([0.3, 0.3, 0.4])
+final_score = scores @ weights
+```
+
+#### 常见错误
+
+- 把 `(n,)`、`(n, 1)` 和 `(1, n)` 当成同一种形状。
+- 使用 Python 循环逐个计算，忽略 NumPy 的向量化。
+- 在标准差为 0 的列上直接标准化。
+- 没有固定随机种子，导致每次实验结果都变。
+
+#### 练习
+
+- 写一个不使用显式 `for` 的标准化函数。
+- 计算每一行的最大值、最小值和极差。
+- 用矩阵乘法实现一个线性模型的预测。
+
+#### 过关标准
+
+看到 `X.shape` 就能判断样本数、特征数和运算方向；能用布尔索引和广播解决大部分简单数组计算。
+
+### 模块 4：Pandas 数据处理
+
+#### 目标
+
+能把真实 CSV/Excel/数据库查询结果处理成可分析、可建模的数据表。
+
+#### 学习顺序
+
+读取 → 检查 → 选择 → 清洗 → 合并 → 分组聚合 → 时间特征 → 导出。
+
+```python
+import pandas as pd
+
+df = pd.read_csv("data/raw/orders.csv", parse_dates=["order_time"])
+print(df.shape)
+print(df.info())
+
+df = df.drop_duplicates(subset=["order_id"])
+df["amount"] = pd.to_numeric(df["amount"], errors="coerce")
+df["status"] = df["status"].fillna("unknown").str.strip().str.lower()
+df["month"] = df["order_time"].dt.to_period("M").astype(str)
+
+summary = (
+    df.groupby(["customer_id", "month"], as_index=False)
+      .agg(order_count=("order_id", "nunique"),
+           total_amount=("amount", "sum"),
+           avg_amount=("amount", "mean"))
+)
+summary.to_csv("data/processed/customer_month.csv", index=False)
+```
+
+#### 合并数据前必须检查
+
+```python
+print(left["customer_id"].duplicated().mean())
+print(right["customer_id"].duplicated().mean())
+merged = left.merge(right, on="customer_id", how="left", validate="many_to_one")
+```
+
+`validate` 能在连接关系不符合预期时立即报错，避免多对多连接让数据行数突然膨胀。
+
+#### 练习
+
+1. 写数据质量报告：行数、列数、类型、缺失率、重复数、唯一值数。
+2. 合并三个月订单 CSV，并增加月份字段。
+3. 按客户计算最近一次订单距今天的天数。
+4. 找出金额为负、日期为空、客户不存在的记录，分别导出异常文件。
+
+#### 过关标准
+
+面对陌生表格，能在 30 分钟内回答：数据有多少行、主键是什么、缺失在哪里、目标如何分布、哪些字段能用于预测。
+
+### 模块 5：可视化与探索性分析
+
+#### 目标
+
+不是“画漂亮图”，而是通过图表决定接下来该清洗什么、构造什么特征、使用什么指标。
+
+#### 推荐分析顺序
+
+1. 先看数据量、目标分布和时间范围。
+2. 再看数值字段分布和极端值。
+3. 再看类别字段的频数和长尾。
+4. 最后分析特征与目标的关系。
+
+```python
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+sns.set_theme(style="whitegrid")
+fig, axes = plt.subplots(1, 3, figsize=(16, 4))
+sns.histplot(data=df, x="amount", bins=40, ax=axes[0])
+sns.boxplot(data=df, x="status", y="amount", ax=axes[1])
+sns.countplot(data=df, x="is_churn", ax=axes[2])
+plt.tight_layout()
+plt.savefig("reports/eda.png", dpi=150)
+```
+
+#### 每张图都要写结论
+
+例如：不要只放“金额分布图”，而要写“金额右偏明显，少数大额订单影响均值；建模时尝试 `log1p(amount)`，评估使用 MAE 而不是只看 RMSE”。
+
+#### 过关标准
+
+你能从一份图表中提出至少 3 个可验证假设，并用分组统计或下一轮实验验证，而不是把相关性直接当成因果。
+
+### 模块 6：数学与统计的实用学法
+
+#### 目标
+
+理解模型为什么这样计算，不要求一开始手推所有复杂证明。
+
+#### 对照学习表
+
+| 机器学习内容 | 需要补的数学 | 动手验证 |
+|---|---|---|
+| 线性回归 | 向量、矩阵、最小二乘 | 手写一元线性回归梯度下降 |
+| 逻辑回归 | 概率、Sigmoid、对数损失 | 画 Sigmoid 和损失曲线 |
+| 正则化 | 范数、偏差—方差 | 比较不同 `alpha` 的系数 |
+| PCA | 方差、协方差、特征向量 | 降到二维后画散点图 |
+| 神经网络 | 偏导、链式法则、梯度 | 用自动求导核对手算梯度 |
+| 评估指标 | 条件概率、抽样、估计 | 用混淆矩阵计算 Precision/Recall |
+| 时间序列 | 滞后、平稳性、滚动统计 | 与上一期基线做回测 |
+
+#### 最小梯度下降示例
+
+```python
+import numpy as np
+
+rng = np.random.default_rng(0)
+x = np.linspace(0, 10, 100)
+y = 3 * x + 2 + rng.normal(0, 1, len(x))
+w, b = 0.0, 0.0
+lr = 0.01
+
+for _ in range(2000):
+    pred = w * x + b
+    error = pred - y
+    dw = 2 * np.mean(error * x)
+    db = 2 * np.mean(error)
+    w -= lr * dw
+    b -= lr * db
+
+print(round(w, 2), round(b, 2))
+```
+
+#### 过关标准
+
+你能用自己的话解释：损失函数在衡量什么、梯度指向哪里、学习率过大或过小会怎样、为什么训练集指标不能代表泛化能力。
+
+### 模块 7：监督学习与第一个分类项目
+
+#### 目标
+
+完成一次可靠的“定义标签—划分数据—预处理—训练—评估—分析”闭环。
+
+#### 实战步骤
+
+1. 写问题定义卡：样本、标签、预测时点、错误成本。
+2. 检查目标比例和重复实体。
+3. 先做多数类或业务规则基线。
+4. 使用逻辑回归作为可解释基线。
+5. 再比较随机森林或梯度提升树。
+6. 用交叉验证比较模型，不要用测试集反复调参。
+7. 根据业务成本选择阈值。
+8. 对高置信错误做切片分析。
+
+```python
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import average_precision_score, classification_report
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, stratify=y, random_state=42
+)
+model = make_pipeline(
+    StandardScaler(),
+    LogisticRegression(max_iter=2000, class_weight="balanced")
+)
+model.fit(X_train, y_train)
+prob = model.predict_proba(X_test)[:, 1]
+pred = (prob >= 0.4).astype(int)
+print("PR-AUC:", average_precision_score(y_test, prob))
+print(classification_report(y_test, pred, digits=4))
+```
+
+#### 必须回答的问题
+
+- 为什么这里用分层划分？
+- 正类比例很低时，为什么不能只看 Accuracy？
+- 为什么标准化必须放入 Pipeline？
+- 0.4 阈值是谁决定的？它是否应该由测试集决定？
+
+#### 过关标准
+
+你能提交一份报告，包含基线、至少两个模型、交叉验证结果、测试结果、混淆矩阵、阈值理由和错误样本分析。
+
+### 模块 8：回归、树模型与调参
+
+#### 目标
+
+理解结构化数据中最常用的模型家族，并能识别欠拟合、过拟合和数据泄漏。
+
+#### 推荐顺序
+
+线性回归 → Ridge/Lasso → 决策树 → 随机森林 → 梯度提升树。
+
+#### 调参只改有意义的参数
+
+- 线性模型：正则强度 `alpha`。
+- 决策树：`max_depth`、`min_samples_leaf`。
+- 随机森林：树数、最大特征数、叶节点最小样本。
+- Boosting：学习率、树数、树深或叶子数、正则化。
+
+```python
+from sklearn.model_selection import RandomizedSearchCV
+from sklearn.ensemble import HistGradientBoostingRegressor
+from sklearn.metrics import mean_absolute_error
+
+search = RandomizedSearchCV(
+    HistGradientBoostingRegressor(random_state=42),
+    param_distributions={
+        "learning_rate": [0.03, 0.05, 0.1],
+        "max_iter": [100, 200, 400],
+        "max_leaf_nodes": [15, 31, 63],
+        "l2_regularization": [0.0, 0.1, 1.0],
+    },
+    n_iter=15,
+    scoring="neg_mean_absolute_error",
+    cv=5,
+    random_state=42,
+    n_jobs=-1,
+)
+search.fit(X_train, y_train)
+print(search.best_params_)
+print(mean_absolute_error(y_test, search.predict(X_test)))
+```
+
+#### 过关标准
+
+你能画出训练/验证误差随模型复杂度变化的趋势，并说明最终选择是因为泛化能力、速度、可解释性还是业务成本，而不是因为某次随机划分分数最高。
+
+### 模块 9：无监督学习与异常检测
+
+#### 目标
+
+在没有标签时发现结构，但不把算法输出直接当成“真实类别”。
+
+#### K-Means 快速流程
+
+```python
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
+
+cluster_model = make_pipeline(
+    StandardScaler(),
+    KMeans(n_clusters=4, n_init="auto", random_state=42),
+)
+df["cluster"] = cluster_model.fit_predict(df[["frequency", "amount", "recency"]])
+profile = df.groupby("cluster")[["frequency", "amount", "recency"]].mean()
+print(profile)
+```
+
+#### 正确理解聚类
+
+- `cluster=0` 不代表天然存在某种客户类型，必须查看各簇的特征画像。
+- `n_clusters` 不是只能靠肘部图决定，要结合业务可执行性。
+- 高维数据中的距离可能失去意义，必要时先做特征选择或降维。
+- 异常检测需要人工抽样核验，并且要明确误报成本。
+
+#### 过关标准
+
+你能为每个簇写出可读的名称、典型特征、样本比例、可采取的动作和不能得出的结论。
+
+### 模块 10：时间序列
+
+#### 目标
+
+掌握“只能用过去预测未来”的建模逻辑。
+
+#### 快速上手步骤
+
+1. 按时间排序，确认一个时间点是否有多条记录。
+2. 建立上一期、移动平均和去年同期基线。
+3. 生成滞后特征时先 `shift`，再计算滚动值。
+4. 使用滚动回测，不随机打乱。
+5. 分别分析不同预测跨度和不同产品/设备。
+
+```python
+df = df.sort_values(["product_id", "date"])
+g = df.groupby("product_id", group_keys=False)
+df["lag_1"] = g["demand"].shift(1)
+df["lag_7"] = g["demand"].shift(7)
+df["rolling_7"] = g["demand"].transform(
+    lambda s: s.shift(1).rolling(7, min_periods=3).mean()
+)
+```
+
+`shift(1)` 很重要：如果先计算当天滚动平均，再用它预测当天，就把目标信息混进特征了。
+
+#### 过关标准
+
+你能画出每次回测的训练窗口和验证窗口，说明每个特征在预测时点是否真的可获得，并能和朴素基线比较。
+
+### 模块 11：特征工程、Pipeline 与防泄漏
+
+#### 目标
+
+把所有会“从数据学习参数”的步骤封装进训练流程，确保交叉验证和线上推理一致。
+
+#### 规则
+
+- 缺失值填补器只能在训练折拟合。
+- 标准化器只能在训练折拟合。
+- One-Hot 的类别集合只能从训练折获得。
+- 目标编码、过采样、特征选择和 PCA 也必须放在交叉验证内部。
+- 线上输入列名、类型和单位必须与训练一致。
+
+```python
+from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+
+preprocess = ColumnTransformer([
+    ("num", Pipeline([
+        ("impute", SimpleImputer(strategy="median")),
+        ("scale", StandardScaler()),
+    ]), numeric_features),
+    ("cat", Pipeline([
+        ("impute", SimpleImputer(strategy="most_frequent")),
+        ("onehot", OneHotEncoder(handle_unknown="ignore")),
+    ]), categorical_features),
+])
+```
+
+#### 排查泄漏的提问方式
+
+对每个字段问：“在真实预测发生的那一刻，这个值是否已经存在？它是否由标签、未来事件或人工复核结果生成？”只要答案不确定，就暂时移除并做对照实验。
+
+#### 过关标准
+
+你能人为构造一个泄漏字段，观察它让验证分数异常升高，再删除它并解释分数为什么回落。
+
+### 模块 12：PyTorch 深度学习
+
+#### 目标
+
+能从数据张量开始，写出训练、验证、保存检查点和推理流程；不追求第一天训练大模型。
+
+#### 学习顺序
+
+张量和形状 → Dataset/DataLoader → `nn.Module` → 损失函数 → 优化器 → 训练/验证模式 → 早停 → GPU。
+
+#### 每轮训练必须有的结构
+
+```python
+for epoch in range(epochs):
+    model.train()
+    for xb, yb in train_loader:
+        optimizer.zero_grad()
+        loss = criterion(model(xb), yb)
+        loss.backward()
+        optimizer.step()
+
+    model.eval()
+    with torch.no_grad():
+        # 只计算验证损失和指标，不更新参数
+        val_loss = evaluate(model, val_loader)
+```
+
+#### 训练失败排查顺序
+
+1. 先用 10 个样本尝试过拟合，确认模型、标签和损失函数连接正确。
+2. 打印一个 batch 的形状、类型、最小值和最大值。
+3. 检查标签编码与损失函数是否匹配。
+4. 检查学习率、归一化、`train/eval` 模式。
+5. 再考虑网络结构和数据增强。
+
+#### 过关标准
+
+你能解释一个 batch 从 DataLoader 到 loss 再到参数更新的完整路径，并保存最佳验证模型，而不是只保存最后一轮。
+
+### 模块 13：模型解释与误差分析
+
+#### 目标
+
+知道模型在哪些样本上可靠、在哪些场景会失败，以及如何把结果转成业务动作。
+
+#### 固定分析模板
+
+1. 按置信度分组：高置信正确、高置信错误、低置信样本。
+2. 按人群/产品/地区/时间切片。
+3. 统计各切片的样本量、正例率、Precision、Recall、MAE。
+4. 查看特征缺失率和输入分布。
+5. 对错误样本做人工归因：标签错、数据错、特征不足、模型不足。
+
+```python
+result = test_df.assign(prob=prob, pred=pred)
+result["correct"] = result["pred"] == result["label"]
+slice_report = (
+    result.groupby("customer_type")
+          .agg(n=("label", "size"),
+               actual_rate=("label", "mean"),
+               predicted_rate=("pred", "mean"),
+               error_rate=("correct", lambda s: 1 - s.mean()))
+)
+print(slice_report)
+```
+
+#### 过关标准
+
+你能回答“模型整体分数不错，为什么业务仍然不满意”，并能指出至少一个可改进的数据或流程问题。
+
+### 模块 14：部署与工程化
+
+#### 目标
+
+把训练结果变成别人可以稳定调用的程序，而不是只在自己的 Notebook 里运行。
+
+#### 快速上手顺序
+
+1. 用 `joblib`/PyTorch 保存完整模型和配置。
+2. 写一个批量预测脚本，先验证输入输出。
+3. 使用 Pydantic 校验接口输入。
+4. 用 FastAPI 暴露 `/health` 和 `/predict`。
+5. 增加模型版本、日志、异常响应和固定样例测试。
+6. 再考虑 Docker、CI/CD、灰度和监控。
+
+```python
+from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/health")
+def health() -> dict[str, str]:
+    return {"status": "ok", "model_version": "1.0.0"}
+```
+
+#### 上线前自测
+
+- 正常请求是否返回正确字段？
+- 缺字段、类型错误、超范围值是否被拒绝？
+- 未知类别是否会导致编码器崩溃？
+- 训练时的单位、时区和缺失处理是否与线上一致？
+- 服务重启后是否能加载模型？
+- 是否记录输入摘要而不是敏感原始数据？
+
+#### 过关标准
+
+别人只按 README 的命令，就能启动服务、发送一条样例请求、得到预测结果，并知道模型版本和限制。
+
+### 模块 15：综合项目执行法
+
+#### 目标
+
+把知识串成可展示的作品，不在数据、模型、部署之间反复迷路。
+
+#### 项目分阶段交付
+
+**第 1 阶段：问题和数据（1～2 天）**
+
+- 写一页问题定义卡。
+- 列出字段、标签、预测时点和数据来源。
+- 做数据质量报告。
+
+**第 2 阶段：基线（1～2 天）**
+
+- 实现业务规则或均值/上一期基线。
+- 用一个简单模型跑通端到端流程。
+
+**第 3 阶段：模型迭代（3～5 天）**
+
+- 增加特征和第二种模型。
+- 使用正确的交叉验证。
+- 记录每次实验和结论。
+
+**第 4 阶段：误差与交付（2～4 天）**
+
+- 做切片和高置信错误分析。
+- 固定测试集一次性评估。
+- 保存模型，写接口和 README。
+
+#### 项目目录最低要求
+
+```text
+project/
+├── README.md
+├── data/README.md
+├── notebooks/01_eda.ipynb
+├── src/train.py
+├── src/predict.py
+├── src/api.py
+├── models/
+├── reports/metrics.csv
+└── tests/test_predict.py
+```
+
+#### 过关标准
+
+项目不依赖你的口头解释也能运行；README 能说明为什么这样切分、为什么选这个指标、模型在哪些场景可能失败。
+
+## 二十九、30 天快速上手计划
+
+如果你想尽快获得“能做项目”的能力，可以按下面执行。每天 60～90 分钟即可；已有开发经验时，不必把语法阶段拖长。
+
+| 天数 | 任务 | 当天产出 |
+|---:|---|---|
+| 1 | 建虚拟环境、Git、项目目录 | 可运行脚本 |
+| 2 | Python 容器与循环 | 订单汇总 |
+| 3 | 函数、类型提示、异常 | 可复用函数 |
+| 4 | CSV/JSON 读写 | 数据加载脚本 |
+| 5 | Pandas 基础 | 清洗后的表 |
+| 6 | 缺失、重复、异常检查 | 质量报告 |
+| 7 | 周复盘与 5 个测试 | 第一个小项目 |
+| 8 | NumPy 数组和形状 | 数值处理脚本 |
+| 9 | Pandas 分组、合并 | 汇总表 |
+| 10 | 可视化 | EDA 图表 |
+| 11 | 目标定义和数据切分 | 问题定义卡 |
+| 12 | 业务/统计基线 | 基线指标 |
+| 13 | 逻辑回归 | 分类基线 |
+| 14 | 分类指标和混淆矩阵 | 评估报告 |
+| 15 | Pipeline 与缺失编码 | 无泄漏流程 |
+| 16 | 决策树与随机森林 | 模型对比 |
+| 17 | 交叉验证 | 稳定指标 |
+| 18 | 阈值选择 | 业务阈值 |
+| 19 | 误差切片 | 错误分析 |
+| 20 | 特征工程 | 特征版本 |
+| 21 | 最终测试集评估 | 最终结果 |
+| 22 | 模型保存和批量预测 | `predict.py` |
+| 23 | FastAPI `/health` | 健康检查 |
+| 24 | FastAPI `/predict` | 预测接口 |
+| 25 | 输入校验和异常处理 | 接口测试 |
+| 26 | README 和运行命令 | 可复现项目 |
+| 27 | 学习 PyTorch 张量和 DataLoader | 第一个 batch |
+| 28 | 写 MLP 训练循环 | 训练曲线 |
+| 29 | 复盘模型失败案例 | 限制清单 |
+| 30 | 整理作品集和下一阶段计划 | 可展示项目 |
+
+每天结束时只写三行复盘：今天学会了什么、哪里报错、明天要验证什么。这样比堆积大量没有运行过的笔记更容易形成长期能力。
+
+## 三十、遇到问题时的排查顺序
+
+### 代码报错
+
+1. 读 traceback 的最后一行。
+2. 打印变量类型、形状、列名和一条真实样本。
+3. 缩小为 5～10 行最小复现代码。
+4. 查官方文档和函数签名。
+5. 修复后为这个错误增加一个测试。
+
+### 模型分数异常高
+
+1. 检查标签是否进入特征。
+2. 检查是否使用了预测时点之后的字段。
+3. 检查同一用户/订单/设备是否跨数据集。
+4. 检查预处理是否在全量数据上拟合。
+5. 与简单基线和时间外推结果比较。
+
+### 模型分数很低
+
+1. 先确认标签和样本定义没有错误。
+2. 查看目标比例、缺失率和特征常量。
+3. 检查训练集指标是否也很低。
+4. 做少量样本过拟合测试，确认代码链路正确。
+5. 重新做误差分析，不要直接盲目调参。
+
+### 训练很慢或内存不够
+
+1. 先减少数据和特征，确认逻辑正确。
+2. 使用合适的数据类型和批处理。
+3. 避免重复复制大型 DataFrame。
+4. 统计每一步耗时和内存，而不是凭感觉优化。
+5. 只有在基线正确后才做并行、缓存或 GPU 优化。
+
+## 三十一、每个模块的最终验收表
+
+| 模块 | 你应该能独立完成的事情 |
+|---|---|
+| 环境 | 创建环境、安装包、运行脚本、提交 Git |
+| Python | 读取文件、写函数、校验数据、处理异常 |
+| NumPy | 判断形状、向量化计算、矩阵乘法 |
+| Pandas | 清洗、合并、聚合、导出数据 |
+| EDA | 发现分布、异常、关系并提出假设 |
+| 数学 | 解释损失、梯度、概率和指标 |
+| 分类/回归 | 建基线、切分、训练、评估、选阈值 |
+| 树模型 | 识别过拟合、调关键参数、分析重要性 |
+| 无监督 | 聚类画像、异常抽样、避免过度解读 |
+| 时间序列 | 滚动回测、构造滞后特征、防未来泄漏 |
+| Pipeline | 让预处理和模型可复现且不泄漏 |
+| PyTorch | 写 Dataset、训练循环、验证和检查点 |
+| 解释分析 | 找到高置信错误和薄弱切片 |
+| 部署 | 提供健康检查、预测接口、版本和校验 |
+| 综合项目 | 从问题定义一直交付到 README 和测试 |
+
+如果某个模块只能“看懂代码”而不能完成右侧任务，就先不要进入下一模块；回到最小任务，删掉复杂部分，重新从 10 行代码跑通。
