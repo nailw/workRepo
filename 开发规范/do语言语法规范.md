@@ -888,3 +888,435 @@ if (handBooks.isEmpty()) {
 | 2026-07-17 | firstOrNull 中声明变量并执行多步逻辑 | 改用 forEach 和标记变量 |
 | 2026-07-17 | 使用 !filter.isEmpty() 判断集合 | 改用显式遍历和布尔变量 |
 | 2026-07-17 | 使用 new KTProcessingTradeHandBook() 作为占位对象 | 改为保存实际字段和选择状态 |
+
+## 24. 官方模型开发与 SDK 文档补充（3.1.15 LTS）
+
+- 整理日期：2026-07-23
+- 文档来源：谷斗智能体平台“模型开发”实用技巧及 3.1.15（LTS）SDK 文档
+- 适用范围：DO 模型代码、数据同步、基础工具、集成服务、Cplex、commons.lang、设备日历和数据服务
+- 状态说明：本节来自平台官方文档。官方示例中存在拼写、类型和返回值错误时，以 API 签名、平台编译结果及实际运行结果为准，错误示例不得直接复制。
+
+### 24.1 使用原则
+
+1. 优先遵守本文件前文中已由实际业务代码或平台编译结果确认的规则。
+2. SDK 文档中的方法签名可以作为能力依据，但示例代码仍需检查类型、变量名、返回值和拼写。
+3. 涉及版本差异、废弃 API 或官方文档未完整说明的语义时，标记为“待验证”，不得自行套用 Java 行为。
+4. 新代码只引入当前任务需要的 API，不为展示 SDK 能力而增加无关依赖。
+
+## 25. 模型节点数据同步规范
+
+状态：官方文档已确认。
+
+### 25.1 禁止全量脏标记加嵌套查找
+
+以下模式不再作为大数据量同步的推荐实现：
+
+~~~java
+Group<A>().forEach{ it.isDirty = true }
+var toAdd = new List<A>()
+
+Group<KTA>().forEach{ kt ->
+    var a = Group<A>().find{ it.id == kt.id }
+    if (a == null) {
+        a = new A()
+        toAdd.add(a)
+    }
+    a.updateFromKT(kt)
+    a.isDirty = false
+}
+
+Group<A>().removeIf{ it.isDirty }
+Group<A>().addAll(toAdd)
+~~~
+
+原因：
+
+- 在知识表循环内反复扫描节点集合，时间复杂度约为 O(n²)；
+- 同步专用的 `isDirty` 没有业务含义，会增加内存、持久化和变更收集成本；
+- 节点属性作为临时状态会产生并发竞争；
+- 多次全量扫描节点，数据利用率低。
+
+### 25.2 使用 Map 做一次性匹配
+
+推荐先按业务唯一键建立 Map，再通过 `remove` 同时完成匹配与剩余数据识别：
+
+~~~java
+var oldMap = new Map<String, A>()
+Group<A>().forEach{ oldMap.put(it.id, it) }
+
+var synchronized = new List<A>()
+Group<KTA>().forEach{ kt ->
+    var a = oldMap.remove(kt.id)
+    if (a == null) {
+        a = new A()
+    }
+    a.updateFromKT(kt)
+    synchronized.add(a)
+}
+
+Group<A>().removeAll(oldMap.values())
+Group<A>().addAll(synchronized)
+~~~
+
+规则：
+
+1. Map 的键必须是真正的业务唯一键；复合键需使用无歧义的组合方式。
+2. `oldMap.remove(key)` 返回已存在对象，同时将其从“待删除”集合中移除。
+3. 同步结束后，`oldMap.values()` 只包含源数据中已不存在的旧对象。
+4. 优先使用 `removeAll` 删除明确对象集合，不使用全量 `removeIf{ isDirty }`。
+5. 临时状态只保存在方法局部变量中，不向模型增加同步专用字段。
+6. 若源数据可能包含重复键，必须先校验或定义确定的冲突处理规则。
+
+## 26. 基础工具 SDK 约束
+
+### 26.1 通用函数和基础类型
+
+- `maxOf(...)`、`minOf(...)` 当前最多支持 5 个参数。
+- `Any.toString()` 用于字符串转换，`Any.equals(Any)` 用于值比较。
+- `Number.intValue()`、`Number.doubleValue()` 用于数字类型转换。
+- `Double.valueOf(Int/String)` 可从整数或字符串构造 Double。
+- Double 支持 `abs`、`ceil`、`floor`、`round`、`roundUp`、`roundDown`、`roundHalfUp`、`roundHalfDown`、`pow` 等方法。
+- 舍入方法返回新值。调用时必须接收返回值，不假设原变量被原地修改。
+
+~~~java
+var rounded = value.roundHalfDown(2)
+~~~
+
+### 26.2 查询专用加速 API
+
+`inValues`、`subset`、`likeValues` 只能用于构建查询条件，禁止在普通模型代码中调用。官方文档明确指出，错误使用可能造成内存泄漏。
+
+- `value.inValues(values, splitter)`：判断当前值是否存在于给定范围；
+- `collection.subset(values, splitter)`：判断给定数据是否存在于当前范围；
+- `value.likeValues(values, splitter)`：类似 SQL `LIKE '%value%'`；
+- 当前支持 String、Int、Double、Boolean；
+- splitter 为空时，默认分隔符为逗号。
+
+### 26.3 控制语句
+
+官方 SDK 确认支持：
+
+- `while`；
+- C 风格 `for`；
+- `if / else if / else`；
+- `break` 和 `continue`；
+- `try / catch`；
+- `throw`。
+
+`try` 与 `catch(e)` 必须同时出现，且只能有一个 `catch`。当前异常变量 `e` 的类型为 Any，异常体系尚不完整。
+
+~~~java
+try {
+    riskyOperation()
+} catch (e) {
+    log.error("执行失败")
+    throw e
+}
+~~~
+
+### 26.4 transient 属性
+
+`transient` 写在属性类型之前。该属性：
+
+1. 不在页面数据中展示；
+2. 不保存到全量数据库；
+3. 不通过集成服务传输，但场景间调用除外。
+
+~~~java
+transient String runtimeOnlyValue
+~~~
+
+### 26.5 定长字符串处理
+
+- `TextFormat(N)`、`VarCharFormat(N)`、`VarChar2Format(N)` 限制最大长度；`-1` 表示不限制。
+- `NumberFormat(M, N)` 中 M 为总数字位数，N 为小数位数，整数位数为 M-N。
+- `StringRangeTemplate(charset)` 支持按指定编码定义定长片段。
+- 使用 `addSegment` 时必须确认 start/end 的边界语义、编码和必填标志。
+- GBK 与 UTF-8 的字节长度不同，不能按字符数量替代编码后的长度。
+
+## 27. 集成服务规范
+
+### 27.1 入口与任务链
+
+`integrationDispatcher()` 返回 IntegrationDispatcher，是协议、节点和任务链的入口。
+
+常用能力：
+
+- `createTaskChains(code, name[, nodes])`；
+- `getTaskChainsByCode(code)`；
+- `execute(code)` 或 `execute(nodes)`；
+- 创建方法、SOAP、数据库等协议；
+- 创建并执行 HTTP、REST WebService、方法、数据库等节点。
+
+任务链和协议的 code 是唯一标识，必须稳定且不可重复。
+
+### 27.2 跨场景调用优先级
+
+官方文档不建议通过任务链在场景方法之间传输数据，优先使用：
+
+- `callSceneStaticMethod`：同步调用静态方法；
+- `asyncSceneStaticMethod`：异步调用静态方法；
+- `asyncCallSceneStaticMethod`：异步调用并处理回调。
+
+跨场景参数目前只能使用 List、Map 或简单类型。传入前必须转换为这些类型，且参数对象不可复用，避免场景之间共享引用、相互修改。
+
+### 27.3 对象传输规则
+
+- compute 对象传输时转换为 Map；
+- compute 内嵌套的 compute 属性不会继续传输，其值为 null；
+- 集合转换为 List；
+- Map 保持为 Map；
+- Group 不属于支持的返回集合；
+- 通过集成任务调用的方法，除 Context 外最多只能声明一个业务参数。
+
+### 27.4 SOAP、HTTP 和 REST
+
+- SOAP/REST 请求参数必须是 Map，或可以解析为 Map 的 JSON 字符串；
+- 其他参数类型会报错；
+- HTTP 和 REST 节点的 URL、请求方式、参数、请求头、媒体类型必须显式设置；
+- 不得在代码中硬编码真实密码、令牌或生产连接信息，应从安全配置中读取。
+
+### 27.5 数据库节点
+
+- SELECT 参数：`List<Any>`；
+- INSERT/UPDATE/DELETE 批量参数：`List<List<Any>>`；
+- 无参数 SQL 按 API 要求传 null；
+- 不同数据库 SQL 方言不同，不能直接复制其他数据库示例；
+- 返回值可能是 JSON 字符串或动态 Map，使用前必须按实际类型解析。
+
+### 27.6 废弃 API
+
+官方 3.1.15 文档仍列出但已标记废弃的 API，例如旧 `createMQAgreement` 和 `nodeMappingHelper`。新代码禁止继续引入；维护旧代码时先确认平台当前版本是否仍保留兼容实现。
+
+## 28. Cplex SDK 规范
+
+### 28.1 推荐建模顺序
+
+每个计算类通过 `cplex()` 获取 CplexExecutor。推荐流程：
+
+1. 创建决策变量；
+2. 构造线性或二次约束；
+3. 设置目标函数；
+4. 设置求解参数；
+5. 调用 `solve()`；
+6. 检查求解状态；
+7. 读取目标值和变量值。
+
+### 28.2 变量、表达式和约束
+
+- 变量类型：`IloNumVarType.Float`、`Int`、`Bool`；
+- 变量通过名称和实例列表共同定位；
+- 线性表达式使用 `linearNumExpr()` 与 `addTerm()`；
+- 约束方向使用 `leSense()`、`eqSense()`、`geSense()`；
+- 二次约束使用 `addQConstr()`；
+- 目标函数可使用 `addMaximize()` 等平台已提供的方法。
+
+### 28.3 求解结果检查
+
+禁止无条件调用 `getObjValue()` 或 `getValue()`。应先检查 `solve()` 的返回值和 `getCplexStatus()`。
+
+~~~java
+cplex().function(model -> {
+    // 创建变量、约束和目标函数
+}).function(model -> {
+    model.setParam(IloCplex.Param.TimeLimit, 10)
+}).function(model -> {
+    var solved = model.solve()
+    if (!solved) {
+        log.info("Cplex 未得到可用解，状态="+model.getCplexStatus())
+        return
+    }
+    var objective = model.getObjValue()
+    var value = model.getValue(model.getVarByName("x", instances))
+}).exec()
+~~~
+
+Cplex SDK 是 Java API 的 DO 映射。平台未列出的参数、状态或过期能力，必须结合平台集成的 Cplex 版本验证。
+
+## 29. commons.lang 辅助工具规范
+
+### 29.1 多字段排序
+
+`ComparatorBuilder<T>` 按选择器加入顺序比较，默认升序。支持 Int、Double、String、Boolean、Date、DateTime、Duration、Decimal 选择器。
+
+~~~java
+var comparator = new ComparatorBuilder<Task>()
+    .dateTimeSelector(it -> it.startTime)
+    .intSelector(it -> it.priority)
+    .desc()
+
+var sorted = CollectionUtils.sorted(tasks, comparator)
+~~~
+
+`CollectionUtils.sorted` 返回新的 List，不应假设原集合被原地修改。
+
+### 29.2 UUID 和对象转换
+
+- `UUIDUtil.generateUUID()`：生成带连字符 UUID；
+- `UUIDUtil.generateCompactUUID()`：生成不带连字符的紧凑 UUID；
+- `AnyUtil.anyToMap(any)`：将对象属性拆解为 `Map<String, Any>`，适合集成边界转换。
+
+### 29.3 29s 电文解析
+
+`IXCom29sUtil.transformBody(body, args[, charset])` 按字段描述拆解电文：
+
+- `字段名@长度` 定义字段；
+- 逗号后的数字表示小数位；
+- charset 当前文档明确支持 GBK；
+- GBK 模式必须按编码字节长度计算，不能按 Java/DO 字符串长度直接推断。
+
+## 30. 设备日历规范
+
+### 30.1 禁止直接修改日历属性
+
+官方文档明确说明日历属性只读。禁止直接编辑 Calendar、CalendarRule、TimeInterval 等对象的受管属性，必须通过 CalendarManager 和相应实例方法修改。
+
+### 30.2 规则变更批量生效
+
+绑定、解绑、修改、删除规则只记录变更；调用 `consumerRuleChangedEvents()` 后，规则才会对日历产生或更新停机时间。
+
+推荐：
+
+1. 批量创建或修改日历和规则；
+2. 完成 bind/unbind；
+3. 最后调用一次 `consumerRuleChangedEvents()`。
+
+### 30.3 局部更新
+
+`update...IgnoreNull()` 会忽略 null 参数。调用重载方法时应为 null 显式指定类型，避免匹配到错误重载。
+
+~~~java
+manager.updateRuleByIdIgnoreNull(
+    rule.id,
+    (String)null,
+    (String)null,
+    (DateTime)null,
+    (DateTime)null,
+    "week",
+    (Int)null
+)
+~~~
+
+### 30.4 时间区间生成
+
+- Calendar 与 CalendarRule 的时间范围共同限制有效区间；
+- `repeatCycle` 和 `repeatFrequency` 定义重复周期；
+- TimeIntervalTemplate 在每个有效周期中生成 TimeInterval；
+- 模板时间不在当前周期时，会按规则顺延；
+- 修改周期、频率、模板或绑定关系后必须重新消费变更事件。
+
+### 30.5 场景与持久化
+
+- 场景默认 CalendarManager：`context().calendarManager()`；
+- 只有 Group 中的数据会持久化；
+- CalendarManager 接入响应式上下文后，其管理的数据会同步至 Group。
+
+## 31. 数据服务规范
+
+### 31.1 data 数据类
+
+使用 `data` 声明数据库实体。数据类默认包含创建者、创建时间、修改者、修改时间等审计字段。
+
+支持的属性类型包括 Boolean、Int、Double、String、Decimal、Date、DateTime、Duration。Serial 在当前文档中标记为尚未支持。
+
+Decimal 默认总长度 38、精度 6。Duration 在数据库中按数值存储，使用原始 SQL 时需通过 `toMillis()` 转为毫秒。
+
+### 31.2 主键、唯一约束和索引
+
+- 主键不可省略；
+- 未显式声明主键时，平台默认尝试使用名为 id 的字段；
+- 主键定义后不可修改；
+- 使用 `unique(...)` 声明唯一约束；
+- 使用 `index(...)` 声明索引；
+- 复合约束和索引中的字段顺序属于定义的一部分。
+
+~~~java
+data Example {
+    Int id
+    String name
+    Int age
+
+    primary(id)
+    unique(name)
+    index(age, name)
+}
+~~~
+
+### 31.3 DbHelper 增删改
+
+DbHelper 支持：
+
+- `insert`、`update`、`delete`、`insertOrUpdate`；
+- 对应的 Batch 批量方法；
+- `transactional` 事务代码块；
+- DSL 查询和原始 SQL。
+
+优先批量操作，避免在循环中逐条访问数据库。
+
+### 31.4 事务和缓存上下文
+
+事务开启时创建持久化上下文，提交或回滚时销毁。事务内 DSL 查询出的数据实例由上下文托管；先查询再批量更新或删除可以减少重复查询。
+
+禁止把网络调用、求解、大循环等长耗时业务放入数据库事务代码块，避免长事务和锁占用。
+
+### 31.5 原始 SQL
+
+原始 SQL 不自动处理以下事项：
+
+- 数据类名与真实表名映射；
+- 属性名驼峰转数据库下划线；
+- 审计字段；
+- Duration 毫秒转换；
+- 参数安全。
+
+使用 `actualTableName(Class)` 获取真实表名。包含业务输入的 SQL 必须使用平台支持的参数化方式，禁止字符串拼接造成注入风险。
+
+### 31.6 QueryDSL
+
+优先使用编辑器生成的 Q 辅助类：
+
+~~~java
+var qUser = QUser.quser
+var users = context.getDbHelper()
+    .dslSelectFrom(qUser)
+    .where(qUser.age.eq(18))
+    .orderBy(List.of(qUser.name.asc()))
+    .findAll()
+~~~
+
+支持投影、join、groupBy、having、offset、limit、orderBy、update 和 delete。
+
+仅用于构造 DSL 语句的 SelectStatement 不支持 `findOne` 和 `findAll`；需要真实访问数据库时必须从 DbHelper 创建可执行查询。
+
+## 32. 官方文档示例纠错原则
+
+本次整理发现官方示例存在多处明显问题，包括但不限于：
+
+- `minOf` 示例误写为 `maxOf`；
+- `roundDown` 示例误调用 `roundUp`；
+- `DateTime.parse` 多处误写为 `DateTime.pase`；
+- 示例日期包含不存在的月份或日期；
+- 部分变量、Q 类、集合添加对象和返回类型前后不一致；
+- 个别描述把降序写成升序；
+- 示例包含真实样式的数据库口令或地址，不得复制到业务代码。
+
+处理规则：
+
+1. API 是否存在以标题签名和平台编译结果为准；
+2. 示例与签名冲突时，不把示例作为语法证据；
+3. 生产代码不得复制文档中的地址、账号、密码和令牌；
+4. 发现新错误时，在本文件变更记录中追加，不静默修正后假装已确认。
+
+## 33. 本次整理变更记录
+
+| 日期 | 来源 | 修正内容 | 影响规则 |
+|---|---|---|---|
+| 2026-07-23 | 模型开发文档 | 增加 Map 匹配、removeAll 删除和禁止 isDirty 全量同步规范 | 25 |
+| 2026-07-23 | 3.1.15 基础工具 SDK | 增加查询专用 API、控制语句、异常、transient 和定长文本规则 | 26 |
+| 2026-07-23 | 3.1.15 集成服务 SDK | 增加跨场景参数、对象传输、协议节点、数据库节点及废弃 API 规则 | 27 |
+| 2026-07-23 | 3.1.15 Cplex SDK | 增加建模顺序、变量约束和求解状态检查规范 | 28 |
+| 2026-07-23 | 3.1.15 commons.lang SDK | 增加比较器、集合排序、UUID、Any 转 Map 和 29s 电文规则 | 29 |
+| 2026-07-23 | 3.1.15 设备日历 SDK | 增加只读属性、规则批量生效、时间区间和持久化规范 | 30 |
+| 2026-07-23 | 3.1.15 数据服务 SDK | 增加 data、约束索引、DbHelper、事务、原始 SQL 和 QueryDSL 规范 | 31 |
+| 2026-07-23 | 官方示例核对 | 记录示例笔误、类型错误和敏感配置复制风险 | 32 |
+
