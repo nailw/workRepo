@@ -1320,3 +1320,1205 @@ var users = context.getDbHelper()
 | 2026-07-23 | 3.1.15 数据服务 SDK | 增加 data、约束索引、DbHelper、事务、原始 SQL 和 QueryDSL 规范 | 31 |
 | 2026-07-23 | 官方示例核对 | 记录示例笔误、类型错误和敏感配置复制风险 | 32 |
 
+## 附录 A：官方文档完整目录与 API 索引
+
+- 对应平台版本：3.1.15（LTS）
+- 整理日期：2026-07-23
+- 收录范围：模型开发、基础工具、集成服务、Cplex、commons.lang、设备日历、数据服务。
+- 本附录按官方页面顺序保留全部章节标题、类、属性和方法标题；对于未作为标题展示的方法，补充其正文签名。
+- “参数”“返回值”“示例”等重复条目仍保留，以保证与原文目录逐项对应。
+- 具体语义、限制和推荐写法以前文规范为准；官方示例中的已知错误不得直接复制。
+- 内网来源地址仅用于平台内部定位。
+
+### 数据服务
+
+来源：`http://172.16.9.88/docs/plat3/3.1.15/SDKDoc/%E6%95%B0%E6%8D%AE%E6%9C%8D%E5%8A%A1`
+
+- 1. 快速开始
+- 2. 数据定义
+- 2.1 类型定义
+- 2.2 属性定义
+- 2.3 约束定义
+- 2.4 索引定义
+- 3. 数据操作
+- 3.1 DbHelper
+- 3.1.1 实例方法
+- 3.1.1.1 void insert(DoAny any)
+- 3.1.1.2 void update(DoAny any)
+- 3.1.1.3 void delete(DoAny any)
+- 3.1.1.4 void insertOrUpdate(DoAny any)
+- 3.1.1.5 void insertBatch(Collection<?> c)
+- 3.1.1.6 void updateBatch(Collection<?> c)
+- 3.1.1.7 void deleteBatch(Collection<?> c)
+- 3.1.1.8 void insertOrUpdateBatch(Collection<?> c)
+- 3.1.1.8 void transactional(func()void fun)
+- 3.1.1.9 原始 sql 操作，注意事项
+- 3.1.1.10 String actualTableName(Class clazz)
+- 3.1.1.11 List<Map<String, Any>> nativeSelect(String sql)
+- 3.1.1.12 <T> List<T> nativeSelect(String sql, Clazz<T> resultClazz)
+- 3.1.1.13 int nativeInsert(String sql)
+- 3.1.1.14 int nativeUpdate(String sql)
+- 3.1.1.15 int nativeDelete(String sql)
+- 3.2 dsl
+- 3.2.1 dsl 增删改查方法
+- DBhelper 增删改查
+- 3.2.2 dsl 查询语法
+- 3.2.3 dsl 插入语法
+- 3.2.4 dsl 修改语法
+- 3.2.5 dsl 删除语法
+- 3.2.6 dsl 表达式 api
+- 3.2.6.1 简单表达式
+- 3.2.6.1.1 父类
+- 3.2.6.1.2 实例方法
+- 3.2.6.2 可比较的基本表达式~~~sql
+- 3.2.6.2.1 父类
+- 3.2.6.2.2 实例方法
+- 3.2.6.3 可比较的表达式
+- 3.2.6.3.1 父类
+- 3.2.6.3.2 实例方法
+- 3.2.6.4 布尔类型表达式
+- 3.2.6.4.1 父类
+- 3.2.6.4.2 实例方法
+- 3.2.6.5 字符串表达式
+- 3.2.6.5.1 父类
+- 3.2.6.5.2 实例方法
+- 3.2.6.6 整型表达式
+- 3.2.6.6.1 父类
+- 3.2.6.6.2 实例方法
+- 3.2.6.7 浮点型表达式
+- 3.2.6.7.1 父类
+- 3.2.6.7.2 实例方法
+- 3.2.6.8 日期表达式
+- 3.2.6.8.1 父类
+- 3.2.6.8.2 实例方法
+- 3.2.6.9 日期表达式
+- 3.2.6.9.1 父类
+- 3.2.6.9.2 实例方法
+- 3.2.6.10 时间间隔表达式
+- 3.2.6.10.1 父类
+- 3.2.6.10.2 实例方法
+- 3.2.6.11 排序说明符
+- 3.2.6.11.1 父类
+- 3.2.6.11.2 实例方法
+- 3.2.7 com.goodo.querydsl.SelectStatement 查询
+- 3.2.8 QueryDSL 示例
+- 3.2.8.1 前言
+- 3.2.8.2 类型定义
+- 3.2.8.3 创建初始数据
+- 3.2.8.4 基本查询
+- 3.2.8.5 投影查询
+- 3.2.8.6 join 查询
+- 3.2.8.7 group 查询
+- 3.2.8.8 分页和排序
+- 3.2.8.9 更新数据
+- 3.2.8.10 删除数据
+- 3.3 缓存上下文
+- 3.3.1 生命周期
+- 3.3.2 作用
+- 3.3.3 用法
+- 3.3.3.1 先查询再修改
+- 3.3.3.2 先查询再删除
+
+补充签名（原文以正文代码列出，未全部设为标题）：
+
+- `<T> com.goodo.querydsl.Query<T> dslSelect(com.goodo.querydsl.EntityPathBase<T> epb)`
+- `com.goodo.querydsl.Query<Map<com.goodo.querydsl.SimpleExpression, Any>> dslSelect(List<com.goodo.querydsl.SimpleExpression> columns)`
+- `<T> com.goodo.querydsl.Query<T> dslSelectFrom(com.goodo.querydsl.EntityPathBase<T> epb)`
+- `com.goodo.querydsl.Insert dslInsert(com.goodo.querydsl.EntityPathBase epb)`
+- `com.goodo.querydsl.Update dslUpdate(com.goodo.querydsl.EntityPathBase epb)`
+- `com.goodo.querydsl.Delete dslDelete(com.goodo.querydsl.EntityPathBase epb)`
+- `com.goaodo.querydsl.Query<T> from(com.goodo.querydsl.EntityPathBase epb)`
+- `com.goodo.querydsl.Query<T> from(List<com.goodo.querydsl.EntityPathBase> epbs)`
+- `com.goodo.querydsl.Query<T> where(com.goodo.querydsl.BooleanExpression predicate)`
+- `com.goodo.querydsl.Query<T> innerJoin(com.goodo.querydsl.EntityPathBase epb)`
+- `com.goodo.querydsl.Query<T> leftJoin(com.goodo.querydsl.EntityPathBase epb)`
+- `com.goodo.querydsl.Query<T> rightJoin(com.goodo.querydsl.EntityPathBase epb)`
+- `com.goodo.querydsl.Query<T> on(com.goodo.querydsl.BooleanExpression predicate)`
+- `com.goodo.querydsl.Query<T> orderBy(com.goodo.querydsl.OrderSpecifier os)`
+- `com.goodo.querydsl.Query<T> orderBy(List<com.goodo.querydsl.OrderSpecifier> oss)`
+- `com.goodo.querydsl.Query<T> groupBy(com.goodo.querydsl.SimpleExpression se)`
+- `com.goodo.querydsl.Query<T> groupBy(List<com.goodo.querydsl.SimpleExpression> ses)`
+- `com.goodo.querydsl.Query<T> having(com.goodo.querydsl.BooleanExpression be)`
+- `com.goodo.querydsl.Query<T> having(List<com.goodo.querydsl.BooleanExpression> bes)`
+- `com.goodo.querydsl.Query<T> limit(Int i)`
+- `com.goodo.querydsl.Query<T> offset(Int i)`
+- `T findOne()`
+- `List<T> findAll()`
+- `com.goodo.querydsl.Insert columns(List<com.goodo.querydsl.SimpleExpression> cs)`
+- `com.goodo.querydsl.Insert values(List<Any> vs)`
+- `com.goodo.querydsl.Insert execute()`
+- `com.goodo.querydsl.Update set(com.goodo.querydsl.SimpleExpression column, Any value)`
+- `com.goodo.querydsl.Update where(com.goodo.querydsl.BooleanExpression predicate)`
+- `com.goodo.querydsl.Update execute()`
+- `com.goodo.querydsl.Delete set(com.goodo.querydsl.SimpleExpression column, Any value)`
+- `com.goodo.querydsl.Delete where(com.goodo.querydsl.BooleanExpression predicate)`
+- `com.goodo.querydsl.Delete execute()`
+- `count(column)`
+- `count(distinct column)`
+- `column in (t1, t2)`
+- `column not in (t1, t2)`
+- `min(column)`
+- `max(column)`
+- `sum(column)`
+- `avg(column)`
+
+### 设备日历
+
+来源：`http://172.16.9.88/docs/plat3/3.1.15/SDKDoc/%E8%AE%BE%E5%A4%87%E6%97%A5%E5%8E%86`
+
+- 1. 日历SDK文档
+- 1.1 核心类
+- 1.1.1 CalendarManager
+- 1.1.1.1 构造器
+- 1.1.1.1.1 无参构造
+- 1.1.1.2 实例方法
+- 1.1.1.2.1 void addCalendar(Calendar)
+- 1.1.1.2.2 void removeCalendar(String)
+- 1.1.1.2.3 Calendar getCalendarById(String)
+- 1.1.1.2.4 List<Calendar> getCalendars()
+- 1.1.1.2.5 CalendarRule insertRule(String, String, DateTime, DateTime, String, Int)
+- 1.1.1.2.6 CalendarRule insertRule(String, String, String, String, String, Int)
+- 1.1.1.2.7 List<CalendarRule> getRules()
+- 1.1.1.2.8 CalendarRule updateRuleByIdIgnoreNull(String, String, String, DateTime, DateTime, String, Int)
+- 1.1.1.2.9 CalendarRule updateRuleByIdIgnoreNull(String, String, String, String, String, String, Int)
+- 1.1.1.2.10 void deleteRuleById(String)
+- 1.1.1.2.11 CalendarRule getRuleById(String)
+- 1.1.1.2.12 List<CalendarRule> getCalendarBindingRules(String)
+- 1.1.1.2.13 void bind(String, String)
+- 1.1.1.2.14 void unbind(String, String)
+- 1.1.1.2.15 void consumerRuleChangedEvents()
+- 1.1.2 Calendar
+- 1.1.2.1 构造器
+- 1.1.2.1.1 无参构造
+- 1.1.2.2 属性
+- 1.1.2.2.1 id : String
+- 1.1.2.2.2 range : CalendarRange 日历范围
+- 1.1.2.2.3 timeIntervals : Map<String, TimeInterval> 停机事件集合
+- 1.1.2.2.4 createByRulesTiMap : Map<String, List<String>> 由日历规则创建的停机时间记录
+- 1.1.2.3 实例方法
+- 1.1.2.3.1 TimeInterval insertTimeInterval(DateTime, DateTime, Int, String)
+- 1.1.2.3.2 TimeInterval insertTimeInterval(DateTime, DateTime, Double, String)
+- 1.1.2.3.3 void addTimeInterval(TimeInterval)
+- 1.1.2.3.4 void addTimeIntervals(List<TimeInterval>)
+- 1.1.2.3.5 void deleteTimeIntervalById(String)
+- 1.1.2.3.6 void deleteTimeIntervalByIds(List<String>)
+- 1.1.2.3.7 TimeInterval updateTimeIntervalByIdIgnoreNull(String, DateTime, DateTime, Double, String)
+- 1.1.2.3.8 TimeInterval updateTimeIntervalByIdIgnoreNull(String, String, String, Double, String)
+- 1.1.2.3.9 Calendar updateRangeIgnoreNull(String, Int, Int)
+- 1.1.2.3.10 DateTime previousAvailable(DateTime)
+- 1.1.2.3.11 DateTime nextAvailable(DateTime)
+- 1.1.2.3.12 DateTime previousUnavailable(DateTime)
+- 1.1.2.3.13 DateTime nextUnavailable(DateTime)
+- 1.1.2.3.14 Duration availableTime(DateTime, DateTime)
+- 1.1.2.3.15 DateTime previousFit(DateTime, Duration)
+- 1.1.2.3.16 DateTime nextFit(DateTime, Duration)
+- 1.1.3 CalendarRange
+- 1.1.3.1 构造器
+- 1.1.3.1.1 无参构造
+- 1.1.3.2 属性
+- 1.1.3.2.1 activationTime : DateTime 启用时间
+- 1.1.3.2.2 timeWindow : Int 时间窗口
+- 1.1.3.2.3 timeOffset : Int 偏移量
+- 1.1.4 CalendarRule
+- 1.1.4.1 构造器
+- 1.1.4.1.1 无参构造
+- 1.1.4.2 属性
+- 1.1.4.2.1 id
+- 1.1.4.2.2 name : String 名称
+- 1.1.4.2.3 description : String 描述
+- 1.1.4.2.4 startTime : DateTime 开始时间
+- 1.1.4.2.5 endTime : DateTime 结束时间
+- 1.1.4.2.6 repeatCycle : String 周期
+- 1.1.4.2.7 repeatFrequency : Int 频率
+- 1.1.4.2.8 templates : Map<String, TimeIntervalTemplate> 停机时间模板id与停机时间模板映射
+- 1.1.4.3 实例方法
+- 1.1.4.3.1 TimeIntervalTemplate insertTemplate(DateTime， DateTime，Double，String)
+- 1.1.4.3.2 TimeIntervalTemplate insertTemplate(DateTime， DateTime，Double，String)
+- 1.1.4.3.3 TimeIntervalTemplate updateTemplateByIdIgnoreNull(String, DateTime， DateTime，Double，String)
+- 1.1.4.3.4 void deleteTemplateById(String)
+- 1.1.5 TimeInterval
+- 1.1.5.1 构造器
+- 1.1.5.1.1 无参构造
+- 1.1.5.1.2 有参构造
+- 1.1.5.2 属性
+- 1.1.5.2.1 id : String 名称
+- 1.1.5.2.2 startTime : DateTime 开始时间
+- 1.1.5.2.3 endTime : DateTime 结束时间
+- 1.1.5.2.4 capacity : Double产能
+- 1.1.5.2.5 description : String 描述
+- 1.1.5.2.6 modifyTimestamp : String 修改时间
+- 1.1.6 TimeIntervalTemplate
+- 1.1.6.1 构造器
+- 1.1.6.2 属性
+- 1.1.6.3 实例方法
+- 1.2 使用帮助
+- 1.2.1 快速开始
+- 1.2.1.1 管理日历与日历规则 case
+- 1.2.2 进阶
+- 1.2.2.1 TimeInterval 生成业务逻辑
+- 1.2.2.2 样例解读
+- 1.2.2.3 平台交互
+- 1.2.2.4 持久化
+
+### 辅助工具 commons.lang
+
+来源：`http://172.16.9.88/docs/plat3/3.1.15/SDKDoc/%E8%BE%85%E5%8A%A9%E5%B7%A5%E5%85%B7%20commons.lang`
+
+- 1. 比较器构造器
+- 1.1 实例方法
+- 1.1.1 Int 选择器
+- 1.1.2 Double 选择器
+- 1.1.3 String 选择器
+- 1.1.4 Boolean 选择器
+- 1.1.5 Date 选择器
+- 1.1.6 DateTime 选择器
+- 1.1.7 Duration 选择器
+- 1.1.8 Decimal 选择器
+- 1.1.9 升序
+- 1.1.10 降序
+- 2. 集合工具
+- 2.1 静态方法
+- 2.2.1 排序
+- 3. uuid 生成工具包
+- 3.1 String generateUUID()
+- 3.2 String generateCompactUUID()
+- 4. AnyUtil 工具类
+- 4.1 静态属性
+- 4.2 静态方法
+- 4.2.1 Map<String,Any> anyToMap(Any any) 将any实例分解为一个Map
+- 4.2.2 实例方法
+- 5. IXCom29sUtil工具类
+- 5.1 静态属性
+- 5.2 静态方法
+- 5.2.1 Map<String,Any> transformBody(String string , List<String> args) 拆解29s电文数据
+- 5.2.2 Map<String,Any> transformBody(String string , List<String> args, String charset)
+- 5.3 实例方法
+
+### Cplex工具
+
+来源：`http://172.16.9.88/docs/plat3/3.1.15/SDKDoc/Cplex%E5%B7%A5%E5%85%B7`
+
+- 1. 核心类
+- 1.1 IloCplex
+- 1.1.1 实例方法
+- 1.2 IloNumVarType
+- 1.2.1 静态属性
+- 1.2.2 实例方法
+- 1.3 IloNumVar extends IloNumExpr implement IloAddable
+- 1.3.1 实例方法
+- 1.4 IloLinearNumExpr extends IloNumExpr
+- 1.4.1 实例方法
+- 1.5 IloObjective implement IloAddable
+- 1.6 Param
+- 1.7 CplexStatus
+- 1.8 CplexExecutor
+- 1.8.1 实例方法
+- 2. 快速开始
+
+补充签名（原文以正文代码列出，未全部设为标题）：
+
+- `IloNumVar addIloNumVar( Double lb, Double ub, IloNumVarType type, String name, List<Any> instances )`
+- `IloNumVar getVarByName(String name, List<Any> instances)`
+- `Double getVarOptimalValueByName(String name, List<Any> instances)`
+- `IloConstraInt addConstr( IloNumExpr expr, String sense, Double rhs, String name, List<Any> instances )`
+- `String leSense()`
+- `String eqSense()`
+- `String geSense()`
+- `// 增加 Q 静态变量 IloConstraInt addQConstr( IloNumExpr expr, String sense, Double rhs, String name, List<Any> instances )`
+- `IloLinearNumExpr linearNumExpr()`
+- `void setParam(Param param, Number i)`
+- `Double tuneParam()`
+- `IloObjective addMaximize(IloNumExpr iloNumExpr)`
+- `void writeParam(String s)`
+- `Boolean solve()`
+- `CplexStatus getCplexStatus()`
+- `Double getValue(IloNumVar iloNumVar)`
+- `Double getObjValue()`
+- `void remove(IloObjective iloObjective)`
+- `void exportModel(String name)`
+- `Int getTypeValue()`
+- `IloNumVarType getType()`
+- `Double getLB()`
+- `Double getUB()`
+- `void setLB(Double v)`
+- `void setUB(Double v)`
+- `String getName()`
+- `void setName(String s)`
+- `void addTerm(Double v, IloNumVar iloNumVar)`
+- `void addTerm(IloNumVar iloNumVar, Double v)`
+- `void add(IloLinearNumExpr iloLinearNumExpr)`
+- `void clear()`
+- `Double getConstant()`
+- `void setConstant(Double v)`
+- `void remove(IloNumVar iloNumVar)`
+
+### 集成服务
+
+来源：`http://172.16.9.88/docs/plat3/3.1.15/SDKDoc/%E9%9B%86%E6%88%90%E6%9C%8D%E5%8A%A1`
+
+- 1. IntegrationDispatcher
+- 1.1 createTaskChains(string code, string name)
+- 1.1.1 参数
+- 1.1.2 返回值
+- 1.1.3 示例
+- 1.2 createTaskChains(string code, string name, List<Node> nodes)
+- 1.2.1 参数
+- 1.2.2 返回值
+- 1.2.3 示例
+- 1.3 getTaskChainsByCode(string code)
+- 1.3.1 参数
+- 1.3.2 返回值
+- 1.3.3 示例
+- 1.4 createSoapAgreement(string code, string name, string wsdlUrl)
+- 1.4.1 参数
+- 1.4.2 返回值
+- 1.4.3 示例
+- 1.5 createMethodAgreement(string code, string name, string projectId, string sceneId)
+- 1.5.1 参数
+- 1.5.2 返回值
+- 1.5.3 示例
+- 1.6 createMethodAgreementByProjectCodeAndSceneCode(string code, string name, string projectCode, string sceneCode)
+- 1.6.1 参数
+- 1.6.2 返回值
+- 1.6.3 示例
+- 1.6.4 注意事项
+- 1.7 createDatabaseAgreement(string code, string name, string url, string userName, string password)
+- 1.7.1 参数
+- 1.7.2 返回值
+- 1.7.3 示例
+- 1.8 createMQAgreement(string code, string name) (已废弃，计划在3.1.3版本中删除)
+- 1.8.1 参数
+- 1.8.2 返回值
+- 1.8.3 示例
+- 1.9 nodeMappingHelper() (已废弃，计划在3.1.3版本中删除)
+- 1.9.1 返回值
+- 1.9.2 示例
+- 1.10 execute(string code)
+- 1.10.1 参数
+- 1.10.2 示例
+- 1.11 execute(List<Node> nodes)
+- 1.11.1 参数
+- 1.11.2 示例
+- 1.12 callSceneStaticMethod(String project , String scene ,String class ,String method , Any args)
+- 1.12.1 参数
+- 1.13 asyncSceneStaticMethod(String project , String scene ,String class ,String method, Any args)
+- 1.13.1 参数
+- 1.14 asyncCallSceneStaticMethod(Context context, String project, String scene, String class, String method, Any args, Either rs)
+- 1.14.1 参数
+- 2. Either
+- 2.1 of(success: func(Any)Void , fail:func(Void)Void))
+- 2.1.1 参数
+- 2.1.2 返回
+- 2.2 of(success: func(Any)Void)
+- 2.2.1 参数
+- 2.2.2 返回
+- 3. TaskChains
+- 3.1 addLast(Node node)
+- 3.1.1 参数
+- 3.1.2 示例
+- 3.2 addBefore(Node node, string preNodeCode)
+- 3.2.1 参数
+- 3.2.2 示例
+- 3.3 addBefore(Node node, Node preNode)
+- 3.3.1 参数
+- 3.3.2 示例
+- 3.4 remove(string code)
+- 3.4.1 参数
+- 3.4.2 示例
+- 3.5 remove(Node node)
+- 3.5.1 参数
+- 3.5.2 示例
+- 3.6 save()
+- 3.6.1 示例
+- 3.7 getNode(string code)
+- 3.7.1 参数
+- 3.7.2 示例
+- 4. Agreement
+- 4.1 save()
+- 4.1.1 示例
+- 4.2 saveIfNotExist()
+- 4.2.1 示例
+- 4.3 getNodes()
+- 4.3.1 返回值
+- 4.3.2 示例
+- 4.4 getNode(string code)
+- 4.4.1 返回值
+- 4.4.2 示例
+- 5. DatabaseAgreement
+- 5.1 createNode(string code, string name, string operator, string sql)
+- 5.1.1 参数
+- 5.1.2 返回值
+- 6. MethodAgreement
+- 6.1 createNode(string code, string name, String className, string methodName)
+- 6.1.1 参数
+- 6.1.2 返回值
+- 6.1.3 示例
+- 6.2 createNode(string code, string name,string className, string methodName, boolean startTransaction)
+- 6.2.1 参数
+- 6.2.2 返回值
+- 6.2.3 示例
+- 6.3 void setStatic()
+- 7. MQAgreement (已废弃，计划在3.1.3版本中删除)
+- 7.1 setHost(string host)
+- 7.1.1 参数
+- 7.1.2 示例
+- 7.2 setPort(number port)
+- 7.2.1 参数
+- 7.2.2 示例
+- 7.3 setUsername(string username)
+- 7.3.1 参数
+- 7.3.2 示例
+- 7.4 setPassword(string password)
+- 7.4.1 参数
+- 7.4.2 示例
+- 7.5 setVirtualHost(string virtualHost)
+- 7.5.1 参数
+- 7.5.2 示例
+- 8. SoapAgreement
+- 8.1 createNode(string code, string name, string namespace, string methodName, boolean soapAction)
+- 8.1.1 参数
+- 8.1.2 返回值
+- 8.1.3 示例
+- 8.2 setHeader(string key, string value)
+- 8.2.1 示例
+- 8.3 getHeaders()
+- 8.3.1 返回值
+- 8.3.2 示例
+- 8.4 setHeaders(Map <string, string> headers)
+- 8.4.1 参数
+- 8.4.2 示例
+- 9. Node
+- 9.1 getIXCom29sNode(string code)
+- 9.1.1 参数
+- 9.1.2 返回值
+- 9.1.3 示例
+- 9.2 createHttp(string code, string name, string url)
+- 9.2.1 参数
+- 9.2.2 返回值
+- 9.2.3 示例
+- 9.3 createHttp(string code, string name, string url,number readTimeout)
+- 9.3.1 参数
+- 9.3.2 返回值
+- 9.3.3 示例
+- 9.4 createRestWebservice(string code, string name, string url)
+- 9.4.1 参数
+- 9.4.2 返回值
+- 9.4.3 示例
+- 9.5 createRestWebservice(string code, string name, string url,number readTimeout)
+- 9.5.1 参数
+- 9.5.2 返回值
+- 9.5.3 示例
+- 9.6 getUrl()
+- 9.6.1 返回值
+- 9.6.2 示例
+- 9.7 getName()
+- 9.7.1 返回值
+- 9.7.2 示例
+- 9.8 getCode()
+- 9.8.1 返回值
+- 9.8.2 示例
+- 9.9 getType()
+- 9.9.1 返回值
+- 9.9.2 示例
+- 9.10 save(string agreementId)
+- 9.10.1 参数
+- 9.10.2 示例
+- 9.11 execute(any param)
+- 9.11.1 参数
+- 9.11.2 返回值
+- 9.11.3 示例
+- 9.12 execute(any param ，Class t)
+- 9.12.1 参数
+- 9.12.2 返回值
+- 9.12.3 示例
+- 9.13 equalsCode(string code)
+- 9.13.1 参数
+- 9.13.2 返回值
+- 9.13.3 示例
+- 10. DatabaseNode
+- 11. IXCom29sNode
+- 11.1 sendMes(String mesNo,String mesBody) 发送IXCom29s协议消息
+- 11.1.1 参数
+- 11.1.2 示例
+- 11.2 sendMes(String mesNo,String mesBody, String charset) 发送IXCom29s协议消息
+- 11.2.1 参数
+- 11.2.2 示例
+- 12. HttpNode
+- 12.1 setParameters(Map<string, string> parameters)
+- 12.1.1 参数
+- 12.1.2 示例
+- 12.2 addHeader(Map<string, string> headers)
+- 12.2.1 参数
+- 12.2.2 示例
+- 12.3 addBasic(string username, string password)
+- 12.3.1 参数
+- 12.3.2 示例
+- 12.4 setContentType(string contentType)
+- 12.4.1 参数
+- 12.4.2 示例
+- 12.5 setMethod(string method)
+- 12.5.1 参数
+- 12.5.2 示例
+- 12.6 setReadTimeout(number readTimeout)
+- 12.6.1 参数
+- 12.6.2 示例
+- 13. RestWebserviceNode
+- 13.1 setPrintLog(Boolean)
+- 13.1.1 示例
+- 13.2 addHeader(Map<string, string> headers)
+- 13.2.1 参数
+- 13.2.2 示例
+- 13.3 addBasic(string username, string password)
+- 13.3.1 参数
+- 13.3.2 示例
+- 13.4 setContentType(string contentType)
+- 13.4.1 参数
+- 13.4.2 示例
+- 13.5 setMethod(string method)
+- 13.5.1 示例
+- 13.6 addSuffix(string suffix)
+- 13.6.1 示例
+- 13.7 addPrefix(string perfix)
+- 13.7.1 示例
+- 13.8 setReadTimeout(number readTimeout)
+- 13.8.1 参数
+- 13.8.2 示例
+- 14. SoapNode
+- 14.1 setPrintLog(Boolean)
+- 14.1.1 示例
+- 15. MethodNode
+- 16. NodeMapping (已废弃，计划在3.1.3版本中删除)
+- 16.1 getCode()
+- 16.1.1 返回值
+- 16.1.2 示例
+- 16.2 setCode(string code)
+- 16.2.1 参数
+- 16.2.2 示例
+- 16.3 getName()
+- 16.3.1 返回值
+- 16.3.2 示例
+- 16.4 setName(string name)
+- 16.4.1 参数
+- 16.4.2 示例
+- 16.5 getModel()
+- 16.5.1 返回值
+- 16.5.2 示例
+- 16.6 setModel(string model)
+- 16.6.1 参数
+- 16.6.2 示例
+- 16.7 getScene()
+- 16.7.1 返回值
+- 16.7.2 示例
+- 16.8 setScene(string scene)
+- 16.8.1 参数
+- 16.8.2 示例
+- 16.9 getClassName()
+- 16.9.1 返回值
+- 16.9.2 示例
+- 16.10 setClassName(string className)
+- 16.10.1 参数
+- 16.10.2 示例
+- 16.11 getMethodName()
+- 16.11.1 返回值
+- 16.11.2 示例
+- 16.12 setMethodName(string MethodName)
+- 16.12.1 参数
+- 16.12.2 示例
+- 16.13 getAgreementCode()
+- 16.13.1 返回值
+- 16.13.2 示例
+- 16.14 setAgreementCode(string agreementCode)
+- 16.14.1 参数
+- 16.14.2 示例
+- 16.15 getRemark()
+- 16.15.1 返回值
+- 16.15.2 示例
+- 16.16 setRemark(string remark)
+- 16.16.1 参数
+- 16.16.2 示例
+- 16.17 etAgreementType()
+- 16.17.1 返回值
+- 16.17.2 示例
+- 16.18 setAgreementType(AgreementType agreementType)
+- 16.18.1 参数
+- 16.18.2 示例
+- 17. NodeMappingHelper (已废弃，计划在3.1.3版本中删除)
+- 17.1 getNodeMappingList(NodeMapping nodeMapping)
+- 17.1.1 参数
+- 17.1.2 返回值
+- 17.1.3 示例
+- 17.2 createNodeMapping(NodeMapping nodeMapping)
+- 17.2.1 参数
+- 17.2.2 返回值
+- 17.2.3 示例
+- 17.3 deleteNodeMapping(string code)
+- 17.3.1 参数
+- 17.3.2 返回值
+- 17.3.3 示例
+- 18. MQSender
+- 18.1 boolean send(Object o, Map<String,Object> mapParams)
+- 19. MQSendHelper
+- 19.1 MQSender getSenderByConfigCode(String configCode)
+- 19.1.1 示例
+- 20. OpenPlantConfig
+- 21. OpenPlantSqlExecutor
+- 21.1 示例
+- 22. 使用帮助
+- 22.1 快速开始
+- 22.1.1 跨场景通信case
+- 22.2 进阶
+- 22.2.1 模型方法节点
+- 22.2.2 Soap节点
+- 22.2.3 Http节点
+- 22.2.4 RestWebService节点
+- 22.2.5 数据库节点
+- 22.2.5.1 基本使用
+- 22.2.5.2 查询参数 ： oracle 数据库
+- 22.2.5.3 查询参数：mysql 数据库
+- 22.2.5.4 查询参数： hana 数据库
+- 23. 注意事项
+
+### 基础工具
+
+来源：`http://172.16.9.88/docs/plat3/3.1.15/SDKDoc/%E5%9F%BA%E7%A1%80%E5%B7%A5%E5%85%B7`
+
+- 1. DO语言SDK
+- 1.1 基础类型
+- 1.1.1 Any 类型
+- 1.1.1.1 静态属性
+- 1.1.1.2 静态方法
+- 1.1.1.2.1 static <T> maxOf(...T)
+- 1.1.1.2.2 static Any minOf(...Any)
+- 1.1.1.2.3 static Logger log(Class<?> clazz)
+- 1.1.1.3 实例方法
+- 1.1.1.3.1 Any toString()
+- 1.1.1.3.2 Boolean equals(Any)
+- 1.1.1.3.3 Boolean inValues(String values ,String splitter)
+- 1.1.1.3.4 Boolean subset(String values ,String splitter)
+- 1.1.1.3.5 Boolean likeValues(String values ,String splitter)
+- 1.1.2 Number 数字类型
+- 1.1.2.1 静态属性
+- 1.1.2.2 静态方法
+- 1.1.2.3 实例方法
+- 1.1.2.3.1 整形值 : Int intValue()
+- 1.1.2.3.2 浮点型值 :Double doubleValue()
+- 1.1.3 浮点型
+- 1.1.3.1 父类
+- 1.1.3.2 静态属性
+- 1.1.3.3 静态方法
+- 1.1.3.3.1 Int转换 Double：static Double valueOf(Int)
+- 1.1.3.3.2 String转换Number：static Number valueOf(String)
+- 1.1.3.4 实例方法
+- 1.1.3.4.1 取反 : Double negate()
+- 1.1.3.4.2 乘 : Double multi(Double)
+- 1.1.3.4.3 除 : Double divide(Double)
+- 1.1.3.4.4 取模 : Double mod(Double)
+- 1.1.3.4.5 加 : Double plus(Double)
+- 1.1.3.4.6 减 : Double minus(Double)
+- 1.1.3.4.7 加等 : Double plusAssign(Double)
+- 1.1.3.4.8 减等 : Double plusAssign(Double)
+- 1.1.3.4.9 比较 : Int compare(Double)
+- 1.1.3.4.10 绝对值 : Double abs()
+- 1.1.3.4.11 向上取整 : Double ceil()
+- 1.1.3.4.12 向下取整 : Double floor()
+- 1.1.3.4.13 向“最接近的”整数舍入 : Double roundHalfDown(Int)
+- 1.1.3.4.14 幂次方 : Double pow(Double)
+- 1.1.3.4.15 随机数 : Double randomNext(Double)
+- 1.1.3.4.16 随机数 : Double random(Int,Int)
+- 1.1.3.4.17 是否是正无穷 Boolean isPositiveInfinite()
+- 1.1.3.4.18 是否是负无穷 Boolean isNegativeInfinite()
+- 1.1.3.4.19 是否是非数字 Boolean isNaN()
+- 1.1.3.4.20 Number转换String：String toString()
+- 1.1.4 Int 类型
+- 1.1.4.1 父类
+- 1.1.4.2 静态属性
+- 1.1.4.3 静态方法
+- 1.1.4.3.1 static Int valueOf(String)
+- 1.1.4.4 实例方法
+- 1.1.4.4.1 取反 : Int negate()
+- 1.1.4.4.2 乘 : Int multi(Int)
+- 1.1.4.4.3 除 : Int divide(Int)
+- 1.1.4.4.4 取模 : Int mod(Int)
+- 1.1.4.4.5 加 : Int plus(Int)
+- 1.1.4.4.6 减 : Int minus(Int)
+- 1.1.4.4.7 幂次方 : Double pow(Int)
+- 1.1.4.4.8 比较 : Int compare(Int)
+- 1.1.5 Boolean 类型
+- 1.1.5.1 静态属性
+- 1.1.5.2 静态方法
+- 1.1.5.3 实例方法
+- 1.1.5.3.1 取反 : Boolean not()
+- 1.1.5.3.2 与 : Boolean and(Boolean)
+- 1.1.5.3.3 或 : Boolean or(Boolean)
+- 1.1.6 Class 类型
+- 1.1.6.1 静态属性
+- 1.1.6.2 静态方法
+- 1.1.6.3 实例方法
+- 1.1.6.3.1 判断对象是不是该类的实例 : Boolean isInstance(Any)
+- 1.1.7 Compute 类型
+- 1.1.7.1 静态属性
+- 1.1.7.2 静态方法
+- 1.1.7.2.1 Group 数据同步: <E, T, K> void sync(List<E>, Group<T>, func<E,K>(E)K, func<T,K>(T)K, func<E,T>(E)T, func<T,E>(E, T)void)
+- 1.1.7.3 实例方法
+- 1.1.7.3.1 获取知识表 : List<T> KT<T>()
+- 1.1.7.3.2 获取数据组 : Group<T> Group<T>()
+- 1.1.7.3.3 获取上下文 : Context context()
+- 1.1.7.3.4 相等 : Boolean equals(compute)
+- 1.1.7.3.5 获取集成服务入口 : IntegrationDispatcher IntegrationDispatcher()
+- 1.1.7.3.6 获取 cplex 入口 : CplexExecutor cplex()
+- 1.1.7.3.7 算法入口 : BasicJSPSolver createFJSPSolver()
+- 1.1.7.3.8 通过属性字面量名称直接获取值 : Any getPropertyValue(String)
+- 1.1.7.3.9 通过属性字面量名称直接获取值 没有则使用默认值 : Any getPropertyOrDefault(String,Any)
+- 1.1.7.3.11 获取 Group<T> : 获取数据组 Group<T>
+- 1.1.7.3.12 建立某一组值的索引 : RSet<T> indexing(IndexingValue)
+- 1.1.7.3.13 构建两个对象之间的联系 : void o2m(Groupt<R>,Groupt<RET>,(RE) -> E,(RE) -> R,(R) -> RE)
+- 1.1.7.3.14 获取常量 : String getMessage(String)
+- 1.1.7.3.15 获取常量 : String getMessage(String, List)
+- 1.1.7.3.15 判断当前对象是否是占位对象 : boolean isPlaceholder() since 3.1.15
+- 1.1.8 Context 类型
+- 1.1.8.1 寻找 identity 标识符对应的对象 : Any findObj(Int)
+- 1.1.8.2 获取知识表 : List<T> KT<T>()
+- 1.1.8.3 发送系统消息到外界 : void sendMes(String, String, Int(级别), list(用户code集合))
+- 1.1.8.4 发送系统消息到外界 : void sendMes(String, String, Int(级别), list(用户code集合), Boolean(是否进行语音播报))
+- 1.1.8.5 获取项目code : String projectCode()
+- 1.1.8.6 获取场景code : String sceneCode()
+- 1.1.8.7 获取场景Info对象 : SceneInfo getSceneInfo()
+- 1.1.8.8 获取场景 info 列表：List<SceneInfo> getSceneInfoList(String projectCode)
+- 1.1.8.9 获取当前事务信息：TransactionInformation currentTrans()
+- 1.1.8.10 获取 Group<T> : 获取数据组 Group<T> 详情见[模型建模使用文档]
+- 1.1.8.11 暂停响应式自动计算 : void pause()
+- 1.1.8.12 恢复响应式自动计算 : void resume()
+- 1.1.8.13 获取日历管理器 CalendarManager calendarManager()
+- 1.1.8.14 获取数据帮助类 DbHelper getDbHelper()
+- 1.1.8.15 发送SSE消息 void sendSseMes(String str)
+- 1.1.8.16 抽取数据到影子上下文 : ShadowContext shadow(expression)
+- 1.1.8.17 通过影子对象查找源对象 : ReactiveObject context.findShadowSource(ShadowObject)
+- 1.1.9 数据组（Group<T>）
+- 1.1.9.1 静态属性
+- 1.1.9.2 静态方法
+- 1.1.9.3 实例方法
+- 1.1.9.3.1 T add(T t)
+- 1.1.9.3.2 List<T> addAll(List<T> list)
+- 1.1.9.3.3 void remove(T t)
+- 1.1.9.3.4 void remveAll(List<T>)
+- 1.1.9.3.5 Boolean removeIf(func(T)boolean predicate)
+- 1.1.9.3.6 RSet<T> toRSet()
+- 1.1.9.3.7 Int size()
+- 1.1.9.3.8 Boolean isEmpty()
+- 1.1.9.3.9 Boolean isNotEmpty()
+- 1.1.9.3.10 Booealn contain(Any)
+- 1.1.9.3.11 T firstOrNull()
+- 1.1.9.3.12 T lastOrNull()
+- 1.1.9.3.13 Int count(func(T)Boolean predicate)
+- 1.1.9.3.14 RSet<T> filter(func(T)Boolean predicate)
+- 1.1.9.3.15 void forEach(func(T)void action)
+- 1.1.9.3.16 <E> List<E> map(func(T)E mapper)
+- 1.1.9.3.17 T find(func(T)Boolean predicate)
+- 1.1.9.3.18 计数 : Int count((E) -> void)
+- 1.1.9.3.19 取值最小或不存在 : E? minByOrNull((E) -> (R))
+- 1.1.9.3.20 取值最大或不存在 : E? maxByOrNull((E) -> (R))
+- 1.1.9.3.21 任意匹配 : Boolean any((E) -> (Boolean))
+- 1.1.9.3.22 全部匹配 : Boolean all((E) -> (Boolean))
+- 1.1.9.3.23 累加 Duration 值 : Duration sumByDuration((E) -> Duration)
+- 1.1.9.3.24 累加 Int 值 : Int sumByInt((E) -> Int)
+- 1.1.9.3.25 累加 Int 值 : Int sumByDouble((E) -> Double)
+- 1.1.9.3.26 表达式排序 : RList<E> sortedBy((E) -> Boolean)
+- 1.1.9.3.27 通过表达式去重 : RSet<E> distinctBy(E -> Any)
+- 1.1.10 Table 类型
+- 1.1.10.1 静态属性
+- 1.1.10.2 静态方法
+- 1.1.10.3 成员属性
+- 1.1.10.4 实例方法
+- 1.1.11 Date 类型
+- 1.1.11.1 静态属性
+- 1.1.11.2 静态方法
+- 1.1.11.2.1 取当前时间值 : static Date now()
+- 1.1.11.2.2 转换时间 : static String parse(String)
+- 1.1.11.2.3 转换时间 : static String parse( String, String)
+- 1.1.11.2.4 生成时间 : static Date of(Int,Int,Int,Int,Int)
+- 1.1.11.3 实例方法
+- 1.1.11.3.1 获取年 : Int year()
+- 1.1.11.3.2 获取月 : Int month()
+- 1.1.11.3.3 获取指定时间的当天日期 : DateTime atStartOfDay()
+- 1.1.11.3.4 是否是有限的 : Boolean isFinite()
+- 1.1.11.3.5 加年 : Date plusYears()
+- 1.1.11.3.6 加月 : Date plusMonths()
+- 1.1.11.3.7 加天 : Date plusDays()
+- 1.1.11.3.8 减年 : Date minusYears()
+- 1.1.11.3.9 减月 : Date minusMonths()
+- 1.1.11.3.10 减天 : Date minusDays()
+- 1.1.11.3.11 返回该日期是月份中的第几天 : Int dayOfMonth()
+- 1.1.11.3.12 返回该日期是年份中的第几天 : Int dayOfYear()
+- 1.1.11.3.13 比较 : Int compare(Date)
+- 1.1.11.3.14 转换字符串 : String toString()
+- 1.1.11.3.15 格式化为字符串 String format()
+- 1.1.11.3.16 格式化为字符串 String format(String)
+- 1.1.12 DateTime 类型
+- 1.1.12.1 静态属性
+- 1.1.12.2 静态方法
+- 1.1.12.2.1 取当前时间值 : static DateTime now()
+- 1.1.12.2.2 转换时间 : static String parse(String)
+- 1.1.12.2.3 转换时间 : static String parse(String,String)
+- 1.1.12.2.4 生成时间 : static DateTime of(Int,Int,Int,Int,Int)
+- 1.1.12.2.5 生成时间 : static DateTime of(Int,Int,Int,Int,Int,Int)
+- 1.1.12.2.6 当前纳秒时间 : static Double nanoTime()
+- 1.1.12.3 实例方法
+- 1.1.12.3.1 加 : DateTime plus(Duration)
+- 1.1.12.3.2 减 : DateTime minus(Duration)
+- 1.1.12.3.3 减 : Duration minus(DateTime)
+- 1.1.12.3.4 获取年 : Int year()
+- 1.1.12.3.5 获取月 : Int month()
+- 1.1.12.3.6 获取时 : Int hour()
+- 1.1.12.3.7 获取分 : Int minute()
+- 1.1.12.3.8 获取秒 : Int second()
+- 1.1.12.3.9 获取纳秒 : Int nano()
+- 1.1.12.3.10 转换日期Date : Date toDate()
+- 1.1.12.3.11 获取指定时间的当天日期 : DateTime atStartOfDay()
+- 1.1.12.3.12 获取指定时间的当月第一天 : Date firstDayOfMonth()
+- 1.1.12.3.13 获取指定时间的下月第一天 : Date firstDayOfNextMonth()
+- 1.1.12.3.14 获取指定时间的当月的最后一天 : Date lastDayOfMonth()
+- 1.1.12.3.15 获取当前时间周的具体周几 : Date withWeek(Int)
+- 1.1.12.3.16 是否是有限的 : Boolean isFinite()
+- 1.1.12.3.17 返回该日期是星期几 : DateTime dayOfWeek()
+- 1.1.12.3.18 返回该日期是月份中的第几天 : DateTime dayOfMonth()
+- 1.1.12.3.19 返回该日期是年份中的第几天 : DateTime dayOfYear()
+- 1.1.12.3.20 加年 : DateTime plusYears()
+- 1.1.12.3.21 加月 : DateTime plusMonths()
+- 1.1.12.3.22 加周 : DateTime plusWeeks()
+- 1.1.12.3.23 加天 : DateTime plusDays()
+- 1.1.12.3.24 加小时 : DateTime plusHours()
+- 1.1.12.3.25 加分钟 : DateTime plusMinutes()
+- 1.1.12.3.26 加秒 : DateTime plusSeconds()
+- 1.1.12.3.27 减年 : DateTime minusYears()
+- 1.1.12.3.28 减月 : DateTime minusMonths()
+- 1.1.12.3.29 减周 : DateTime minusWeeks()
+- 1.1.12.3.30 减天 : DateTime minusDays()
+- 1.1.12.3.31 减分钟 : DateTime minusMinutes()
+- 1.1.12.3.32 减秒 : DateTime minusSeconds()
+- 1.1.12.3.33 比较 : Int compare(DateTime)
+- 1.1.12.3.34 转换字符串 : String toString()
+- 1.1.12.3.35 格式化为字符串 String format()
+- 1.1.12.3.36 格式化为字符串 String format(String)
+- 1.1.13 Decimal 类型
+- 1.1.13.1 静态属性
+- 1.1.13.2 静态方法
+- 1.1.13.3 实例方法
+- 1.1.13.3.1 乘 : Decimal multi(Decimal)
+- 1.1.13.3.2 除 : Decimal divide(Decimal)
+- 1.1.13.3.3 加 : Decimal plus(Decimal)
+- 1.1.13.3.4 减 : Decimal minus(Decimal)
+- 1.1.14 Duration 类型
+- 1.1.14.1 静态属性
+- 1.1.14.2 静态方法
+- 1.1.14.2.1 转换为天数 : static duration ofDays()
+- 1.1.14.2.2 转换为小时数 : static duration ofHours()
+- 1.1.14.2.3 转换为分钟数 : static duration ofMinutes()
+- 1.1.14.2.4 转换为秒数 : static duration ofSeconds()
+- 1.1.14.3 实例方法
+- 1.1.14.3.1 加 : duration plus(duration)
+- 1.1.14.3.2 减 : duration minus(duration)
+- 1.1.14.3.3 加等 : duration plusAssign(duration)
+- 1.1.14.3.4 减等 : duration minusAssign(duration)
+- 1.1.14.3.5 乘 : duration multi(Double)
+- 1.1.14.3.6 除 : duration divide(Double)
+- 1.1.14.3.7 除 : Double divide(duration)
+- 1.1.14.3.8 比较 : Int compare(duration)
+- 1.1.14.3.9 加天数 : duration plusDays(Double)
+- 1.1.14.3.10 加小时 : duration plusHours(Double)
+- 1.1.14.3.11 加分钟 : duration plusMinutes(Double)
+- 1.1.14.3.12 加秒数 : duration plusSeconds(Double)
+- 1.1.14.3.13 加毫秒数 : uration plusMillis(Double)
+- 1.1.14.3.14 加纳秒数 : duration plusNanos(Double)
+- 1.1.14.3.15 转换至毫秒数（Double类型） : Double toMillis()
+- 1.1.14.3.16 转换至秒（Double类型） : Double toSeconds()
+- 1.1.14.3.17 转换至分钟（Double类型） : Double toMinutes()
+- 1.1.14.3.18 转换至小时（Double类型） : Double toHours()
+- 1.1.14.3.19 转换至天（Double类型） : Double toDays()
+- 1.1.15 List 类型
+- 1.1.15.1 构造器
+- 1.1.15.2 静态方法
+- 1.1.15.2.1 快速构建并添加 : List<E> of(E) 最多支持5个元素
+- 1.1.15.3 实例方法
+- 1.1.15.3.1 添加 : void add(E)
+- 1.1.15.3.2 获取 : E get(Int)
+- 1.1.15.3.3 获取list前n个 : List<E> take(Int)
+- 1.1.15.3.4 集合大小 : Int size()
+- 1.1.15.3.5 添加所有 : List<E> addAll(List<E>)
+- 1.1.15.3.6 最后一个或空 : E lastOrNull()
+- 1.1.15.3.7 第一个或空 : E firstOrNull()
+- 1.1.15.3.8 获取下标 : Int indexOf(E)
+- 1.1.15.3.9 前一个 : E previous(E)
+- 1.1.15.3.10 后一个 : E next(E)
+- 1.1.15.3.11 去重 : List<E> distinct()
+- 1.1.15.3.12 是否为空 : Boolean isEmpty()
+- 1.1.15.3.13 移除所有 : Boolean removeAll(List<E>)
+- 1.1.15.3.14 移除 : Boolean remove(E)
+- 1.1.15.3.15 是否存在 : Boolean contain(E)
+- 1.1.15.3.16 清空 : Boolean clear()
+- 1.1.15.3.17 反转List : List<E> reverse()
+- 1.1.15.3.18 移动 : List<E> move(Int idx,E e)
+- 1.1.15.3.19 新建并添加 : List<E> addAndRenew(E e)
+- 1.1.15.3.20 获取集合中最大元素或空 : E maxByOrNull()
+- 1.1.15.3.21 获取集合中最小元素或空 : E minByOrNull()
+- 1.1.15.3.22 表达式匹配任何一个 : Boolean any((E) -> Boolean)
+- 1.1.15.3.23 表达式匹配所有 :Boolean all((E) -> Boolean)
+- 1.1.15.3.24 通过表达式去重 : List<E> distinctBy(E -> Any)
+- 1.1.15.3.25 过滤 : List<E> filter((E) -> Boolean)
+- 1.1.15.3.26 查找 : E find((E) -> Boolean)
+- 1.1.15.3.27 循环 : void forEach((E) -> void)
+- 1.1.15.3.28 分组 : Map<K,List<E>> groupBy((E)->Any)
+- 1.1.15.3.29 转换函数 : Any map((E) -> Any)
+- 1.1.15.3.30 通过表达式获取最大元素或空 : E maxByOrNull((E) -> R)
+- 1.1.15.3.31 通过表达式获取最小元素或空 : E minByOrNull((E) -> R)
+- 1.1.15.3.32 满足表达式则移除 : List<E> removeIf((E) -> Boolean)
+- 1.1.15.3.33 表达式排序 : List<E> sortedBy((E) -> Boolean)
+- 1.1.15.3.34 累加 Duration 值 : Duration sumByDuration((E) -> Duration)
+- 1.1.15.3.35 累加 Int 值 : Int sumByInt((E) -> Int)
+- 1.1.15.3.36 累加 Double 值 : Double sumByDouble((E) -> Double)
+- 1.1.15.3.37 flatMap铺平List : List flatMap()
+- 1.1.15.3.38 joinToString : String joinToString(String)
+- 1.1.16 Map 类型
+- 1.1.16.1 构造器
+- 1.1.16.2.1 静态方法
+- 1.1.16.2.1 快速生成 : Map of(K,V) 支持最多5对键值对
+- 1.1.16.2.2 实例方法
+- 1.1.16.2.2.1 放入 : V put(K,V);
+- 1.1.16.2.2.2 获取 : V get(K)
+- 1.1.16.2.2.3 数量 : Int size()
+- 1.1.16.2.2.4 移除 : V remove(K)
+- 1.1.16.2.2.5 清除所有 : void clear()
+- 1.1.16.2.2.6 是否为空 : Boolean isEmpty()
+- 1.1.16.2.2.7 是否有此key : Boolean containsKey(K)
+- 1.1.16.2.2.8 替换 : V replace(K,V)
+- 1.1.16.2.2.9 替换 : Boolean replace(K,oldV,newV)
+- 1.1.16.2.2.10 获取为空时使用默认值 : V getOrDefault(K,V)
+- 1.1.16.2.2.11 如果没有则放入 : V putIfAbsent(K,V)
+- 1.1.16.2.2.12 key集合 : List<K> keys()
+- 1.1.16.2.2.13 value集合 : List<V> values()
+- 1.1.16.2.2.14 新建并放入新值 : Map<K,V> putAndRenew()
+- 1.1.16.2.2.15 V computeIfAbsent(K, (K)->V)
+- 1.1.16.2.2.16 V computeIfPresent(K, (K,V)->R)
+- 1.1.16.2.2.17 循环 : V forEach((K,V)->void)
+- 1.1.16.2.2.18 最大键值对 : Map maxByOrNull((K,V)->R)
+- 1.1.16.2.2.19 最小键值对 : Map minByOrNull((K,V)->R)
+- 1.1.16.2.2.20 过滤 : Map filter((K,V)-> Boolean)
+- 1.1.17 RSet 类型
+- 1.1.17.1 构造器
+- 1.1.17.2 实例方法
+- 1.1.17.2.1 添加 : void add(E)
+- 1.1.17.2.2 添加所有 : void addAll(Collection<E>)
+- 1.1.17.2.3 第一个或空 : E firstOrNull()
+- 1.1.17.2.4 移除 : Boolean remove(E)
+- 1.1.17.2.5 移除特定集合 : Boolean removeAll(List<E>)
+- 1.1.17.2.6 满足表达式则移除 : Boolean removeIf((E) -> Boolean)
+- 1.1.17.2.7 清空 : Boolean clear()
+- 1.1.17.2.8 获取当前序列的大小 : Int size()
+- 1.1.17.2.9 是否此集合为空 : Boolean isEmpty()
+- 1.1.17.2.10 是否此集合不为空 : Boolean isNotEmpty()
+- 1.1.17.2.11 是否存在 : Boolean contain(E)
+- 1.1.17.2.12 是否存在 : Boolean uncontain(E)
+- 1.1.17.2.13 转换成List : List<E> toList()
+- 1.1.17.2.14 循环 : void forEach((E) -> void)
+- 1.1.17.2.15 查找 : E find((E) -> Boolean)
+- 1.1.17.2.16 过滤 : RSet<E> filter((E) -> Boolean)
+- 1.1.17.2.17 计数 : Int count((E) -> void)
+- 1.1.17.2.18 转换函数 : List<R> map((E) -> (R))
+- 1.1.17.2.19 取值最小或不存在 : E? minByOrNull((E) -> (R))
+- 1.1.17.2.20 取值最大或不存在 : E? maxByOrNull((E) -> (R))
+- 1.1.17.2.21 任意匹配 : Boolean any((E) -> (Boolean))
+- 1.1.17.2.22 全部匹配 : Boolean all((E) -> (Boolean))
+- 1.1.17.2.23 满足表达式则移除 : Boolean removeIf((E) -> Boolean)
+- 1.1.17.2.24 累加 Duration 值 : Duration sumByDuration((E) -> Duration)
+- 1.1.17.2.25 累加 Int 值 : Int sumByInt((E) -> Int)
+- 1.1.17.2.26 累加 Int 值 : Int sumByDouble((E) -> Double)
+- 1.1.17.2.27 分组 : Map<R,List<E>> groupBy((E)->R)
+- 1.1.17.2.28 表达式排序 : RList<E> sortedBy((E) -> Boolean)
+- 1.1.17.2.29 通过表达式去重 : RSet<E> distinctBy(E -> Any)
+- 1.1.18 RList 类型
+- 1.1.18.1 在List方法基础上，删除distinct、addAndRenew方法
+- 1.1.18.2 通过表达式去重 : RList<E> distinctBy(E -> Any)
+- 1.1.18.3 过滤 : RList<E> filter((E) -> Boolean)
+- 1.1.18.4 转成 Rset: RSet toRSet()
+- 1.1.19 RSequence 类型
+- 1.1.19.1 构造器
+- 1.1.19.2 实例方法
+- 1.1.19.2.1 添加 : Boolean add(E)
+- 1.1.19.2.2 添加所有 : void addAll(Collection<E>)
+- 1.1.19.2.3 第一个或空 : E firstOrNull()
+- 1.1.19.2.4 最后一个或空 : E lastOrNull()
+- 1.1.19.2.5 获取下标 : Int indexOf(E)
+- 1.1.19.2.6 移除 : Boolean remove(E)
+- 1.1.19.2.7 移除特定集合 : Boolean removeAll(List<E>)
+- 1.1.19.2.8 满足表达式则移除 : Boolean removeIf((E) -> Boolean)
+- 1.1.19.2.9 前一个 : E previous(E)
+- 1.1.19.2.10 后一个 : E next(E)
+- 1.1.19.2.11 移动到E2之前（如果E1不存在默认实现添加） : Boolean moveBefore(E1,E2)
+- 1.1.19.2.12 移动到E2之后（如果E1不存在默认实现添加） : Boolean moveAfter(E1,E2)
+- 1.1.19.2.13 将元素移动到头部位置（默认实现添加） : Boolean moveFirst(E1)
+- 1.1.19.2.14 将元素移动到尾部位置（默认实现添加） : Boolean moveLast(E1,E2)
+- 1.1.19.2.15 获取当前序列的大小 : Int size()
+- 1.1.19.2.16 是否为空 : Boolean isEmpty()
+- 1.1.19.2.17 是否不为空 : Boolean isNotEmpty()
+- 1.1.19.2.18 根据下标获取元素 : E get(Int)
+- 1.1.19.2.19 子序列： RSequence<E> subRSequence(Int, Int)
+- 1.1.19.2.20 循环 : void forEach((E) -> void)
+- 1.1.19.2.21 查找 : E find((E) -> Boolean)
+- 1.1.19.2.22 过滤 : RSequence<E> filter((E) -> Boolean)
+- 1.1.19.2.23 转成 Rset: RSet toRSet()
+- 1.1.19.2.24 取值最小或不存在 : E? minByOrNull((E) -> (R))
+- 1.1.19.2.25 取值最大或不存在 : E? maxByOrNull((E) -> (R))java
+- 1.1.19.2.26 任意匹配 : Boolean any((E) -> (Boolean))
+- 1.1.19.2.27 全部匹配 : Boolean all((E) -> (Boolean))
+- 1.1.19.2.28 满足表达式则移除 : List<E> removeIf((E) -> Boolean)
+- 1.1.19.2.29 累加 Duration 值 : Duration sumByDuration((E) -> Duration)
+- 1.1.19.2.30 累加 Int 值 : Int sumByInt((E) -> Int)
+- 1.1.19.2.31 累加 Int 值 : Int sumByDouble((E) -> Double)
+- 1.1.19.2.32 分组 : Map<R,List<E>> groupBy((E) -> R)
+- 1.1.19.2.33 表达式排序 : RSet<E> sortedBy((E) -> Boolean)
+- 1.1.19.2.34 通过表达式去重 : RSequence<E> distinctBy(E -> Any)
+- 1.1.20 String 类型
+- 1.1.20.1 静态属性
+- 1.1.20.2 静态方法
+- 1.1.20.3 实例方法
+- 1.1.20.4 加 : String plus(String)
+- 1.1.20.5 加 : String plus(Any)
+- 1.1.20.6 加等 : String plusAssign(String)
+- 1.1.20.7 包含 : Boolean contains(String)
+- 1.1.20.8 分割 : List<String> split(String regex)
+- 1.1.20.9 转换小写字符串 : String toLowerCase ()
+- 1.1.20.10 转换大写字符串 : String toUpperCase ()
+- 1.1.20.11 是否为空 : Boolean isEmpty()
+- 1.1.20.12 长度 : Number length()
+- 1.1.20.13 截取字符串 : String substring(Number)
+- 1.1.20.14 截取字符串 : String substring(Number,Number)
+- 1.1.20.15 替换字符串 : String replace(String)
+- 1.1.20.16 转换整型数字 : Int toInt()
+- 1.1.20.17 转换浮点数字 : Double toDouble()
+- 1.1.20.18 转换Boolean : Boolean toBoolean()
+- 1.1.20.19 转换格式 : String format(String)
+- 1.1.20.20 转换duration : duration toDuration()
+- 1.1.20.21 移除后缀 : String removeSuffix()
+- 1.1.20.22 移除前缀 : String removePrefix()
+- 1.1.21 ShowContext 影子上下文
+- 1.2 工具类
+- 1.2.1 Cell
+- 1.2.1.1 静态属性
+- 1.2.1.2 公开属性
+- 1.2.1.2.1 Number rowIndex
+- 1.2.1.2.2 Any value
+- 1.2.1.2.3 Int column
+- 1.2.1.2.4 String column
+- 1.2.1.2.5 String originType
+- 1.2.1.2.6 class type
+- 1.2.1.3 静态方法
+- 1.2.1.4 实例方法
+- 1.2.2 ExcelReader
+- 1.2.2.1 静态方法
+- 1.2.2.2 构造函数
+- 1.2.2.3 实例方法
+- 1.2.2.3.1 List readSheet(String)
+- 1.2.2.3.2 Map read(String)
+- 1.2.3 InputStream
+- 1.2.3.1 静态属性
+- 1.2.3.2 静态方法
+- 1.2.3.3 实例方法
+- 1.2.4 EncryptUtils
+- 1.2.4.1 静态属性
+- 1.2.4.2 静态方法
+- 1.2.4.2.1 String toMd5Hex(String msg)
+- 1.2.4.2.2 String base64Encode(String msg)
+- 1.2.4.2.3 String base64Decode(String base64)
+- 1.2.4.3 实例方法
+- 1.2.5 JsonUtils
+- 1.2.5.1 静态属性
+- 1.2.5.2 静态方法
+- 1.2.5.2.1 Map JsonUtils.toMap(String json)
+- 1.2.5.2.2 List JsonUtils.toList(String json)
+- 1.2.5.2.3 String JsonUtils.toJsonString(Any obj)
+- 1.2.5.2.4 List JsonUtils.xmlToList(String xml)
+- 1.2.5.2.5 Map JsonUtils.xmlToMap(String json)
+- 1.2.5.2.6 实例方法
+- 1.2.6 Logger
+- 1.2.6.1 静态属性
+- 1.2.6.2 静态方法
+- 1.2.6.2.1 void info(String);
+- 1.2.6.2.2 debug日志 : void debug(String);
+- 1.2.6.2.3 warn日志 : void warn(String)
+- 1.2.6.2.4 error日志 : void error(String)
+- 1.2.6.3 实例方法
+- 1.2.7 UUID 工具类
+- 1.2.7.1 静态属性
+- 1.2.7.2 静态方法
+- 1.2.7.2.1 String generateUUID() 生成随机 UUID
+- 1.2.7.2.2 String generateUUID() 生成随机 UUID
+- 1.2.7.3 实例方法
+- 1.2.8 Platforms
+- 1.2.8.1 静态方法
+- 1.2.8.2 构造函数
+- 1.2.8.3 实例方法
+- 1.2.8.3.1 UserService getUserService()
+- 1.2.8.3.2 OrganizationService getOrganizationService()
+- 1.2.9 User
+- 1.2.9.1 静态方法
+- 1.2.9.2 构造函数
+- 1.2.9.3 实例方法
+- 1.2.9.3.1 String getNo()
+- 1.2.9.3.1 String getUsername()
+- 1.2.9.3.1 String getOrganization()
+- 1.2.10 Organization
+- 1.2.10.1 静态方法
+- 1.2.10.2 构造函数
+- 1.2.10.3 实例方法
+- 1.2.10.3.1 String getCode()
+- 1.2.10.3.1 String getName()
+- 1.2.10.3.1 String getParent()
+- 1.2.11 UserService
+- 1.2.11.1 静态方法
+- 1.2.11.1.1 List getAll() 获取平台所有用户
+- 1.2.11.2 构造函数
+- 1.2.11.3 实例方法
+- 1.2.12 OrganizationService
+- 1.2.12.1 静态方法
+- 1.2.12.1.1 List getAll() 获取平台所有组织架构
+- 1.2.12.2 构造函数
+- 1.2.12.3 实例方法
+- 1.3 控制语句
+- 1.3.1 while 循环
+- 1.3.2 for 循环
+- 1.3.3 if else
+- 1.3.4 break
+- 1.3.5 continue
+- 1.3.6 try catch
+- 1.3.6.1 用法
+- 1.3.6.2 案例
+- 1.3.7 throw
+- 1.3.7.1 用法
+- 1.3.7.2 案例
+- 1.3.8 transient
+- 1.3.8.1 用法
+- 1.3.8.2 案例
+- 1.3.9 TextFormat 字符串格式
+- 1.3.9.1 构造函数
+- 1.3.10 NumberFormat 数字格式
+- 1.3.10.1 构造函数
+- 1.3.11 VarChar2Format 字符串格式
+- 1.3.11.1 构造函数
+- 1.3.12 VarCharFormat 字符串格式
+- 1.3.12.1 构造函数
+- 1.3.13 tringRangeTemplate 字符处理
+- 1.3.13.1 构造函数
+- 1.3.13.2 实例方法
+- 1.3.13.2.1 添加字符处理片段 addSegment(String key, int start, int end, Format format, boolean required)
+- 1.3.13.2.2 添加字符处理片段 addSegment(String key, int start, int end, boolean required)
+- 1.3.13.2.3 序列化成字符串 String encode(Map<String, Object> dataMap)
+- 1.3.13.2.4 反序列化字符串 Map<String, Object> decode(String encodedStr)
+
+### 节点数据同步的推荐写法
+
+来源：`http://172.16.9.88/docs/plat3/skills/ModelDevelopment/NodesAsyncBestWay`
+
+- 1. 背景说明
+- 2. 原理与解释
+- 3. 推荐方案
+- 4. 总结
+
