@@ -547,4 +547,850 @@ endTimeEE <= endTimeLE（存在可行窗口时）
 
 7. 对特殊工序分支进行独立测试，不要让项目定制逻辑散落在通用时间主链中。
 
+## 附录 A：时间计算代码分类
+
+本附录按职责整理当前模型中的时间计算代码。除标注为“等价伪代码”的部分外，代码均来自模型设计器中的当前方法实现。为了便于阅读，部分片段只省略了调试代码、注释和与主链无关的项目分支。
+
+### A.1 Assignment：时间入口与模式切换
+
+#### A.1.1 总开始时间 `calcStartTime`
+
+默认先取前处理开始时间，`Zhongchu` 工序在前序为 `Jianlou` 时会按班次边界调整：
+
+```kotlin
+var value = this.prefixStartTime
+
+if (this.operationId == "Zhongchu") {
+    if (
+        (this.pieceStep.previousPieceSteps.firstOrNull()?.operationId ?: "")
+        == "Jianlou"
+    ) {
+        var previousStepEndTime =
+            this.pieceStep.previousPieceSteps.firstOrNull()
+                .assignments.firstOrNull()
+                .processEndTime
+
+        if (
+            (previousStepEndTime.hour() <= 16 &&
+             previousStepEndTime.hour() >= 8) ||
+            (previousStepEndTime.hour() == 17 &&
+             previousStepEndTime.second() == 0 &&
+             previousStepEndTime.minute() == 0)
+        ) {
+            value = previousStepEndTime
+        } else if (
+            (previousStepEndTime.hour() <= 7 &&
+             previousStepEndTime.hour() >= 0) ||
+            (previousStepEndTime.hour() == 8 &&
+             previousStepEndTime.second() == 0 &&
+             previousStepEndTime.minute() == 0)
+        ) {
+            value = previousStepEndTime.atStartOfDay().plusHours(8)
+        } else {
+            value = previousStepEndTime.atStartOfDay()
+                .plusDays(1)
+                .plusHours(8)
+        }
+    }
+}
+
+return value
+```
+
+依赖方向：
+
+```text
+prefixStartTime
+  └─ 特殊工序可能读取 previousPieceStep.assignment.processEndTime
+      └─ startTime
+```
+
+这个特殊分支跨对象读取了前序 Assignment 的时间，是排查跨工序循环时的重点。
+
+#### A.1.2 ASAP 开始边界 `calcStartTimeES`
+
+```kotlin
+return this.earliestAssignment?.startES ?: DateTime.MAX
+```
+
+依赖：
+
+```text
+Assignment.startTimeES
+→ EarliestAssignment.startES
+→ EarliestAssignment.prefixES
+```
+
+#### A.1.3 JIT 开始边界 `calcStartTimeLS`
+
+```kotlin
+if (this.asapMode) {
+    return this.startTimeES
+}
+return this.latestAssignment?.startLS ?: DateTime.MAX
+```
+
+这段代码保证 ASAP 模式下不额外启动一条 JIT 反推链。
+
+#### A.1.4 总结束时间 `calcEndTime`
+
+```kotlin
+if (asapMode) {
+    if (this.operationId == "Zhongchu") {
+        var value = this.startTime.plus(this.processDuration)
+        var hour = value.hour()
+        var minute = value.minute()
+        var second = value.second()
+
+        value = value
+            .minusHours(hour)
+            .minusMinutes(minute)
+            .minusSeconds(second)
+
+        return value
+    } else {
+        if (this.batchFlag) {
+            return this.processEndTime
+        }
+        return this.earliestAssignment?.endEE ?: DateTime.MAX
+    }
+}
+
+return this.latestAssignment?.endLE ?: DateTime.MAX
+```
+
+一般依赖：
+
+```text
+ASAP：endTime → earliestAssignment.endEE → suffixEE
+JIT ：endTime → latestAssignment.endLE  → suffixLE
+批次：endTime → processEndTime → batchEndTime
+```
+
+`Zhongchu` 分支会把 `startTime + processDuration` 截断到当天零点，需要确认这是否确实是业务期望。
+
+#### A.1.5 总时长 `calcDuration`
+
+```kotlin
+return TimeCalc.durationBetween(this.startTime, this.endTime)
+```
+
+因此总时长是日历意义上的开始、结束差，而不是简单的：
+
+```text
+prefixDuration + processDuration + suffixDuration
+```
+
+### A.2 Assignment：三段时间的映射
+
+Assignment 本身主要负责根据模式，从 `EarliestAssignment` 或 `LatestAssignment` 读取三段时间。
+
+#### A.2.1 前处理开始 `calcPrefixStartTime`
+
+```kotlin
+if (asapMode) {
+    if (
+        this.operationId != "Jianlou" ||
+        this.operationId != "Baocaidayin"
+    ) {
+        if (this.batchFlag) {
+            return this.batchStartTime
+        } else {
+            var value =
+                this.earliestAssignment?.prefixES ?: DateTime.MAX
+            var value1 =
+                this.earliestAssignment?.prefixES ?: DateTime.MAX
+
+            var previousPieceStep =
+                context().Group<PieceStep_copy1>().find {
+                    it.pieceId == this.pieceStep.pieceId &&
+                    it.sequenceNr.toDouble() ==
+                        this.pieceStep.sequenceNr.toDouble() - 1
+                }
+
+            if (previousPieceStep != null) {
+                var nextSequence =
+                    previousPieceStep.sequenceNr.toDouble() + 1
+
+                if (
+                    productIdList.contain(this.productId) &&
+                    this.pieceStep.sequenceNr.toDouble() == nextSequence
+                ) {
+                    value1 = previousPieceStep.endTime
+                }
+            }
+
+            return maxOf(value, value1)
+        }
+    } else if (
+        this.operationId == "Jianlou" ||
+        this.operationId == "Baocaidayin"
+    ) {
+        if (this.prefixDuration == Duration.ZERO) {
+            return this.processStartTime
+        } else {
+            return this.processStartTime.minus(prefixDuration)
+        }
+    }
+}
+
+return this.latestAssignment?.prefixLS ?: DateTime.MAX
+```
+
+注意：`operationId != A || operationId != B` 恒为真，详见 8.1 节。它会让后面的特殊分支不可达。
+
+#### A.2.2 前处理结束 `calcPrefixEndTime`
+
+```kotlin
+if (asapMode) {
+    return this.earliestAssignment?.prefixEE ?: DateTime.MAX
+}
+return this.latestAssignment?.prefixLE ?: DateTime.MAX
+```
+
+#### A.2.3 正式生产开始 `calcProcessStartTime`
+
+去掉项目特殊分支后的主干为：
+
+```kotlin
+if (asapMode) {
+    if (this.batchFlag) {
+        return this.batchStartTime
+    }
+    return this.earliestAssignment?.processES ?: DateTime.MAX
+}
+
+return this.latestAssignment?.processLS ?: DateTime.MAX
+```
+
+当前模型还为 `Zhongchu`、`Jianlou`、`Baocaidayin` 增加了前工序和资源顺序约束：
+
+```kotlin
+if (this.operationId == "Zhongchu") {
+    return this.startTime
+}
+
+var value1 = previousPieceStep?.endTime ?: this.systemTime
+var value2 = this.previous?.endTime ?: this.systemTime
+return maxOf(value1, value2)
+```
+
+其中 `Zhongchu` 的：
+
+```text
+processStartTime → startTime → prefixStartTime → ...
+```
+
+必须结合 `prefixStartTime` 的实现确认是否构成回边。
+
+#### A.2.4 正式生产结束 `calcProcessEndTime`
+
+```kotlin
+if (asapMode) {
+    if (this.batchFlag) {
+        return this.batchEndTime
+    }
+    return this.earliestAssignment?.processEE ?: DateTime.MAX
+}
+
+return this.latestAssignment?.processLE ?: DateTime.MAX
+```
+
+#### A.2.5 后处理开始 `calcSuffixStartTime`
+
+```kotlin
+if (asapMode) {
+    return this.earliestAssignment?.suffixES ?: DateTime.MAX
+}
+return this.latestAssignment?.suffixLS ?: DateTime.MAX
+```
+
+#### A.2.6 后处理结束 `calcSuffixEndTime`
+
+当前模型设计器中可见的实现是：
+
+```kotlin
+if (this.asapMode) {
+    return this.startTimeES
+}
+return this.latestAssignment?.startLS ?: DateTime.MAX
+```
+
+这与“后处理结束时间”的属性语义不一致。正常映射预期更接近：
+
+```kotlin
+// 等价伪代码，不代表已修改
+if (this.asapMode) {
+    return this.earliestAssignment?.suffixEE ?: DateTime.MAX
+}
+return this.latestAssignment?.suffixLE ?: DateTime.MAX
+```
+
+是否修改必须先由业务确认，但排查循环时应优先检查当前实现。
+
+### A.3 EarliestAssignment：ASAP 正推代码
+
+ASAP 链的核心方向：
+
+```text
+possibleStartES
+→ prefixES
+→ prefixEE
+→ processES
+→ processEE
+→ suffixES
+→ suffixEE
+→ endEE
+```
+
+#### A.3.1 `calcStartES`
+
+```kotlin
+return this.prefixES
+```
+
+#### A.3.2 `calcPrefixES`
+
+以下是去掉项目数据准备代码后的核心逻辑：
+
+```kotlin
+if (this.owner.forceDragFlag) {
+    return this.owner.forceStartTime
+}
+
+var value = this.possibleStartES
+
+if (this.resource == null) {
+    return value
+}
+
+var thisEnd =
+    this.resource.calcStartForNotSplitByStartPlusDuration(
+        this.possibleStartES,
+        this.owner.prefixDuration +
+            this.owner.processDuration +
+            this.owner.suffixDuration
+    )
+
+var blockedInterval =
+    this.resource.timeIntervals.values()
+        .filter { it.description.contain("订单产能占用") }
+        .filter {
+            (this.possibleStartES > it.startTime &&
+             this.possibleStartES < it.endTime) ||
+            (this.possibleStartES < it.startTime &&
+             thisEnd >= it.startTime &&
+             thisEnd <= it.endTime)
+        }
+        .firstOrNull()
+
+if (blockedInterval != null) {
+    value = blockedInterval.endTime
+}
+
+if (
+    this.resource.prefixCanBeFit &&
+    this.resource.prefixCanBeFit1
+) {
+    value = this.possibleStartES
+} else {
+    value = this.resource.nextAvailable(this.possibleStartES)
+}
+
+if (
+    !this.resource.prefixCanBeFit &&
+    !this.resource.prefixCanBeSplit &&
+    !this.resource.processCanBeFit &&
+    !this.resource.processCanBeSplit &&
+    !this.resource.suffixCanBeFit &&
+    !this.resource.suffixCanBeSplit
+) {
+    value =
+        this.resource.calcStartForNotSplitByStartPlusDuration(
+            this.possibleStartES,
+            this.owner.prefixDuration +
+                this.owner.processDuration +
+                this.owner.suffixDuration
+        )
+}
+
+return value
+```
+
+#### A.3.3 `calcPrefixEE`
+
+```kotlin
+var value =
+    TimeCalc.timePlusDuration(
+        this.prefixES,
+        this.owner.prefixDuration
+    )
+
+if (this.resource == null) {
+    return value
+}
+
+if (
+    !this.resource.prefixCanBeFit &&
+    this.resource.prefixCanBeSplit
+) {
+    value =
+        this.resource.nextFit(
+            this.prefixES,
+            this.owner.prefixDuration
+        )
+}
+
+return value
+```
+
+#### A.3.4 `calcProcessES`
+
+```kotlin
+var value = this.prefixEE
+
+if (this.resource == null) {
+    return value
+}
+
+if (
+    !this.resource.processCanBeFit &&
+    this.prefixEE.isFinite()
+) {
+    value = this.resource.nextAvailable(this.prefixEE)
+}
+
+return value
+```
+
+#### A.3.5 `calcProcessEE`
+
+```kotlin
+var value =
+    TimeCalc.timePlusDuration(
+        this.processES,
+        this.owner.processDuration
+    )
+
+if (this.resource == null) {
+    return value
+}
+
+if (
+    !this.resource.processCanBeFit &&
+    this.resource.processCanBeSplit
+) {
+    value =
+        this.resource.nextFit(
+            this.processES,
+            this.owner.processDuration
+        )
+}
+
+return value
+```
+
+当前实现中还有 `Zhongchu` 对前序 `Jianlou` 和特定资源的日期截断逻辑，应作为项目定制分支单独测试。
+
+#### A.3.6 `calcSuffixES`
+
+```kotlin
+var value = this.processEE
+
+if (this.owner.suffixDuration == Duration.ZERO) {
+    return value
+}
+
+if (this.resource == null) {
+    return value
+}
+
+if (
+    !this.resource.suffixCanBeFit &&
+    this.processEE.isFinite()
+) {
+    value = this.resource.nextAvailable(this.processEE)
+}
+
+return value
+```
+
+#### A.3.7 `calcSuffixEE`
+
+```kotlin
+var value =
+    TimeCalc.timePlusDuration(
+        this.suffixES,
+        this.owner.suffixDuration
+    )
+
+if (this.resource == null) {
+    return value
+}
+
+if (
+    !this.resource.suffixCanBeFit &&
+    this.resource.suffixCanBeSplit
+) {
+    value =
+        this.resource.nextFit(
+            this.suffixES,
+            this.owner.suffixDuration
+        )
+}
+
+return value
+```
+
+#### A.3.8 `calcEndEE`
+
+```kotlin
+return this.suffixEE
+```
+
+### A.4 LatestAssignment：JIT 反推代码
+
+JIT 链与 ASAP 相反：
+
+```text
+possibleEndLE
+→ suffixLE
+→ suffixLS
+→ processLE
+→ processLS
+→ prefixLE
+→ prefixLS
+→ startLS
+```
+
+#### A.4.1 `calcSuffixLE`
+
+```kotlin
+var value = this.possibleEndLE
+
+if (this.resource == null) {
+    return value
+}
+
+if (
+    this.resource.suffixCanBeFit ||
+    this.resource.suffixCanBeSplit
+) {
+    value = this.possibleEndLE
+}
+
+if (
+    !this.resource.prefixCanBeFit &&
+    !this.resource.prefixCanBeSplit &&
+    !this.resource.processCanBeFit &&
+    !this.resource.processCanBeSplit &&
+    !this.resource.suffixCanBeFit &&
+    !this.resource.suffixCanBeSplit
+) {
+    value =
+        this.resource.calcEndForNotSplitByEndMinusDuration(
+            this.possibleEndLE,
+            this.owner.prefixDuration +
+                this.owner.processDuration +
+                this.owner.suffixDuration
+        )
+}
+
+return value
+```
+
+#### A.4.2 `calcSuffixLS`
+
+```kotlin
+var value =
+    TimeCalc.timeMinusDuration(
+        this.suffixLE,
+        this.owner.suffixDuration
+    )
+
+if (this.resource == null) {
+    return value
+}
+
+if (
+    !this.resource.suffixCanBeFit &&
+    this.resource.suffixCanBeSplit
+) {
+    value =
+        this.resource.previousFit(
+            this.suffixLE,
+            this.owner.suffixDuration
+        )
+}
+
+return value
+```
+
+#### A.4.3 `calcProcessLS`
+
+```kotlin
+var value =
+    TimeCalc.timeMinusDuration(
+        this.processLE,
+        this.owner.processDuration
+    )
+
+if (this.resource == null) {
+    return value
+}
+
+if (
+    !this.resource.processCanBeFit &&
+    this.resource.processCanBeSplit
+) {
+    value =
+        this.resource.previousFit(
+            this.processLE,
+            this.owner.processDuration
+        )
+}
+
+return value
+```
+
+#### A.4.4 `calcPrefixLE`
+
+```kotlin
+var value = this.processLS
+
+if (this.owner.prefixDuration == Duration.ZERO) {
+    return value
+}
+
+if (this.resource == null) {
+    return value
+}
+
+if (
+    !this.resource.prefixCanBeFit &&
+    this.processLS.isFinite()
+) {
+    value =
+        this.resource.previousAvailable(this.processLS)
+}
+
+return value
+```
+
+#### A.4.5 `calcEndLE`
+
+```kotlin
+return this.suffixLE
+```
+
+`calcProcessLE`、`calcPrefixLS`、`calcStartLS` 和 `possibleEndLE` 的输入聚合决定了反推链能否闭合。若出现 JIT 循环，应优先逐个确认它们只读取“右侧/后续边界”，没有读回自身或 ES 正推属性。
+
+### A.5 三段时长代码
+
+#### A.5.1 `calcPrefixDuration`
+
+```kotlin
+var value = Duration.ZERO
+
+if (
+    this.previous != null &&
+    this.productId != this.previous?.productId
+) {
+    var row =
+        KT<KTPrefixDuration>().select(
+            it.previousProductId == this.previous?.productId,
+            it.nextProductId == this.productId,
+            it.resourceGroupId == this.resource?.resourceGroupId,
+            it.resourceId == this.resourceId
+        ).firstOrNull()
+
+    value = row?.prefixDuration ?: Duration.ZERO
+} else if (this.previous == null) {
+    var lastFeedback =
+        this.resource?.feedbackAssignments
+            ?.maxByOrNull { it.startTime }
+
+    if (
+        lastFeedback != null &&
+        this.productId != lastFeedback?.productId
+    ) {
+        var row =
+            KT<KTPrefixDuration>().select(
+                it.previousProductId == lastFeedback?.productId,
+                it.nextProductId == this.productId,
+                it.resourceGroupId ==
+                    this.resource?.resourceGroupId,
+                it.resourceId == this.resourceId
+            ).firstOrNull()
+
+        value = row?.prefixDuration ?: Duration.ZERO
+    }
+}
+
+if (this.prefixCleanFlagByHand) {
+    value = prefixDur
+    this.prefixType = "超期清场"
+}
+
+if (this.isOverdueClean) {
+    value = this.overCalculatorPrefixDuration
+}
+
+return value
+```
+
+循环风险：
+
+```text
+prefixDuration
+→ previous / feedbackAssignments.startTime
+→ 其他 Assignment 的时间链
+→ 当前 Assignment
+```
+
+#### A.5.2 `calcProcessDuration`
+
+```kotlin
+var value = Duration.ZERO
+
+if (this.operationId == "Zhongchu") {
+    if (
+        this.pieceStep.previousPieceSteps
+            .firstOrNull().operationId == "Jianlou"
+    ) {
+        if (
+            this.pieceStep.previousPieceSteps
+                .firstOrNull().assignments
+                .firstOrNull().resource.resourceName
+                .contain("检漏槽")
+        ) {
+            value =
+                context().KT<KTIntermediateStorage>()
+                    .find { it.productId == this.productId }
+                    .storageDuration
+        } else {
+            value =
+                context().KT<KTWeightCheckConfig>()
+                    .find { it.productId == this.productId }
+                    .interval
+        }
+    }
+}
+
+if (
+    this.operationId == "Jianlou" &&
+    this.sequenceNr.toInt() > 5
+) {
+    value =
+        context().KT<KTSingleResourceSpeedExtend>()
+            .find {
+                it.productId == this.productId &&
+                it.resourceId == this.resourceId &&
+                it.pieceSizeQuantity == this.quantity
+            }
+            .durationForSinglePiece
+}
+
+return value
+```
+
+#### A.5.3 `calcSuffixDuration`
+
+```kotlin
+var value1 = Duration.ZERO
+
+if (
+    this.next != null &&
+    this.productId != this.next?.productId
+) {
+    var row =
+        KT<KTSuffixDuration>().select(
+            it.previousProductId == this.productId,
+            it.nextProductId == this.next?.productId,
+            it.resourceGroupId == this.resource?.resourceGroupId,
+            it.resourceId == this.resourceId
+        ).firstOrNull()
+
+    value1 = row?.suffixDuration ?: Duration.ZERO
+}
+
+var value2 = value1
+value2 = this.earliestAssignment?.suffixDuration ?: value1
+return value2
+```
+
+这里同时读取了 `next` 和 `earliestAssignment.suffixDuration`。如果 `EarliestAssignment.suffixDuration` 又回读 owner 的 `suffixDuration`，会形成直接的跨对象自循环，必须在调用链中确认。
+
+### A.6 日历修正函数分类
+
+| 函数 | 方向 | 用途 |
+|---|---|---|
+| `nextAvailable(time)` | 向后 | 找到不在停机区间内的下一个可用时刻 |
+| `previousAvailable(time)` | 向前 | 找到不在停机区间内的上一个可用时刻 |
+| `nextFit(start, duration)` | 向后 | 从开始时间正推可容纳指定时长的区间 |
+| `previousFit(end, duration)` | 向前 | 从结束时间反推可容纳指定时长的区间 |
+| `calcStartForNotSplitByStartPlusDuration(...)` | 向后 | 整段不可拆分时修正开始时间 |
+| `calcEndForNotSplitByEndMinusDuration(...)` | 向前 | 整段不可拆分时修正结束时间 |
+| `TimeCalc.timePlusDuration(...)` | 向后 | 在时间轴上增加时长 |
+| `TimeCalc.timeMinusDuration(...)` | 向前 | 在时间轴上扣减时长 |
+| `TimeCalc.durationBetween(...)` | 区间 | 计算开始、结束之间的总时长 |
+
+日历函数的输入必须是已收敛的有限时间。若把 `DateTime.MAX`、`DateTime.MIN` 或由当前属性反向计算出的时间传入，应先检查是否会放大循环或得到无效区间。
+
+### A.7 按代码快速定位循环
+
+看到循环栈后，可按以下代码模式分类：
+
+#### 模式一：直接自读
+
+```kotlin
+fun calcX(): DateTime {
+    return this.x
+}
+```
+
+#### 模式二：同对象双属性互读
+
+```kotlin
+fun calcA() = this.b
+fun calcB() = this.a
+```
+
+#### 模式三：owner 回边
+
+```text
+Assignment.x
+→ earliestAssignment.y
+→ owner.x
+```
+
+#### 模式四：关系对象回边
+
+```text
+A.startTime
+→ A.previous.endTime
+→ B.next.startTime
+→ A.startTime
+```
+
+#### 模式五：时长回边
+
+```text
+startTime
+→ prefixDuration
+→ previous.endTime
+→ next.startTime
+→ startTime
+```
+
+#### 模式六：批次聚合包含自身
+
+```text
+Assignment.startTime
+→ batchStartTime
+→ min(batch.assignments.startTime)
+→ Assignment.startTime
+```
+
+排查时应先把实际调用链转换成上述一种或多种模式，再决定是修关系数据、修依赖方向，还是拆分计算阶段。
 
