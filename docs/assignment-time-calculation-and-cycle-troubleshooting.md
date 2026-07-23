@@ -547,6 +547,94 @@ endTimeEE <= endTimeLE（存在可行窗口时）
 
 7. 对特殊工序分支进行独立测试，不要让项目定制逻辑散落在通用时间主链中。
 
+## 11. 接续机制
+
+“接续”用于描述相邻工艺步骤之间的时间关系。系统不是简单地让下工序等待上工序全部结束，而是通过接续类型、最小间隔、最大间隔及是否包含清场等参数，决定上下游任务可以如何重叠。
+
+### 11.1 接续参数
+
+每条接续规则包含三个核心参数：
+
+| 参数 | 类型 | 含义 |
+|---|---|---|
+| `stepConnectType` | `String` | 接续类型，当前支持 `ES`、`SS`、`EE` |
+| `stepConnectMinGap` | `Duration` | 上下游对应时间点之间的最小间隔 |
+| `stepConnectMaxGap` | `Duration` | 上下游对应时间点之间允许的最大间隔 |
+
+在 Assignment 基类中，默认值为：
+
+```kotlin
+fun calcStepConnectType(): String {
+    // 继承类实现
+    return ModelConstants.ES
+}
+
+fun calcStepConnectMinGap(): Duration {
+    // 继承类实现
+    return Duration.ZERO
+}
+
+fun calcStepConnectMaxGap(): Duration {
+    // 继承类实现
+    return Duration.ZERO
+}
+```
+
+即没有业务配置或子类覆盖时，默认采用：
+
+```text
+ES 接续 + 最小间隔 0 + 最大间隔 0
+```
+
+### 11.2 接续配置来源
+
+WorkOrderStep 通过 `KTStepConnectRule` 查询接续规则：
+
+```kotlin
+var tuple = (
+    ModelConstants.ES,
+    Duration.ZERO,
+    Duration.ZERO
+)
+
+var row = KT<KTStepConnectRule>().select(
+    it.routingId ==
+        (this?.routingStep?.owner?.routingId ?: ""),
+    it.operationId == this.operationId
+).firstOrNull()
+
+if (row != null) {
+    tuple = (
+        row.connectType,
+        row.minGap,
+        row.maxGap
+    )
+}
+
+return tuple
+```
+
+当前查询键为：
+
+```text
+routingId + operationId
+```
+
+源码中按 `productId`、`sequenceNr` 查询的条件已被注释。因此，如果同一路径、同一工序在不同产品或不同序号下需要不同接续规则，当前查询可能只能取到第一条匹配记录。
+
+WorkOrderStep 再从 Tuple 中拆出三个参数：
+
+```kotlin
+fun calcStepConnectType(): String {
+    return this…3020 tokens truncated…] 确认 ES 使用生产结束还是清场结束
+- [ ] 确认 EE 是否包含后处理时长
+- [ ] 检查工艺顺序与设备顺序是否相反
+- [ ] 检查最大间隔分支是否读取下游并回到当前任务
+- [ ] 检查 JIT 使用的是当前步骤间隔还是下游步骤间隔
+- [ ] 检查 JIT 中 `nextFit` 的方向是否符合预期
+- [ ] 检查上游或下游集合为空时是否错误回退到 `systemTime`
+- [ ] 检查存在多个前序/后序时，`firstOrNull`、`lastOrNull`、`maxByOrNull` 是否选中了正确任务
+
 ## 附录 A：时间计算代码分类
 
 本附录按职责整理当前模型中的时间计算代码。除标注为“等价伪代码”的部分外，代码均来自模型设计器中的当前方法实现。为了便于阅读，部分片段只省略了调试代码、注释和与主链无关的项目分支。
